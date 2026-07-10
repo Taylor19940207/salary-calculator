@@ -7,8 +7,8 @@ services:
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
-      - key: NODE_ENV
-        value: production
+      # NODE_ENV=production は設定しないこと:
+      # npm ci が devDependencies (vite/tsc/@types) をスキップしてビルドが壊れる
       - key: DATABASE_PATH
         value: /tmp/salary_calculator.db
       - key: BASIC_AUTH_USER
