@@ -16,11 +16,52 @@ export async function runSeed(db: Database): Promise<void> {
   // 都道府県データ
   const prefectures = [
     { code: '01', name_ja: '北海道', name_en: 'Hokkaido', region: '北海道' },
+    { code: '02', name_ja: '青森県', name_en: 'Aomori', region: '東北' },
+    { code: '03', name_ja: '岩手県', name_en: 'Iwate', region: '東北' },
+    { code: '04', name_ja: '宮城県', name_en: 'Miyagi', region: '東北' },
+    { code: '05', name_ja: '秋田県', name_en: 'Akita', region: '東北' },
+    { code: '06', name_ja: '山形県', name_en: 'Yamagata', region: '東北' },
     { code: '07', name_ja: '福島県', name_en: 'Fukushima', region: '東北' },
+    { code: '08', name_ja: '茨城県', name_en: 'Ibaraki', region: '関東' },
+    { code: '09', name_ja: '栃木県', name_en: 'Tochigi', region: '関東' },
+    { code: '10', name_ja: '群馬県', name_en: 'Gunma', region: '関東' },
+    { code: '11', name_ja: '埼玉県', name_en: 'Saitama', region: '関東' },
+    { code: '12', name_ja: '千葉県', name_en: 'Chiba', region: '関東' },
     { code: '13', name_ja: '東京都', name_en: 'Tokyo', region: '関東' },
     { code: '14', name_ja: '神奈川県', name_en: 'Kanagawa', region: '関東' },
+    { code: '15', name_ja: '新潟県', name_en: 'Niigata', region: '中部' },
+    { code: '16', name_ja: '富山県', name_en: 'Toyama', region: '中部' },
+    { code: '17', name_ja: '石川県', name_en: 'Ishikawa', region: '中部' },
+    { code: '18', name_ja: '福井県', name_en: 'Fukui', region: '中部' },
+    { code: '19', name_ja: '山梨県', name_en: 'Yamanashi', region: '中部' },
+    { code: '20', name_ja: '長野県', name_en: 'Nagano', region: '中部' },
+    { code: '21', name_ja: '岐阜県', name_en: 'Gifu', region: '中部' },
+    { code: '22', name_ja: '静岡県', name_en: 'Shizuoka', region: '中部' },
+    { code: '23', name_ja: '愛知県', name_en: 'Aichi', region: '中部' },
+    { code: '24', name_ja: '三重県', name_en: 'Mie', region: '近畿' },
+    { code: '25', name_ja: '滋賀県', name_en: 'Shiga', region: '近畿' },
+    { code: '26', name_ja: '京都府', name_en: 'Kyoto', region: '近畿' },
     { code: '27', name_ja: '大阪府', name_en: 'Osaka', region: '近畿' },
+    { code: '28', name_ja: '兵庫県', name_en: 'Hyogo', region: '近畿' },
+    { code: '29', name_ja: '奈良県', name_en: 'Nara', region: '近畿' },
+    { code: '30', name_ja: '和歌山県', name_en: 'Wakayama', region: '近畿' },
+    { code: '31', name_ja: '鳥取県', name_en: 'Tottori', region: '中国' },
+    { code: '32', name_ja: '島根県', name_en: 'Shimane', region: '中国' },
+    { code: '33', name_ja: '岡山県', name_en: 'Okayama', region: '中国' },
+    { code: '34', name_ja: '広島県', name_en: 'Hiroshima', region: '中国' },
+    { code: '35', name_ja: '山口県', name_en: 'Yamaguchi', region: '中国' },
+    { code: '36', name_ja: '徳島県', name_en: 'Tokushima', region: '四国' },
+    { code: '37', name_ja: '香川県', name_en: 'Kagawa', region: '四国' },
+    { code: '38', name_ja: '愛媛県', name_en: 'Ehime', region: '四国' },
+    { code: '39', name_ja: '高知県', name_en: 'Kochi', region: '四国' },
     { code: '40', name_ja: '福岡県', name_en: 'Fukuoka', region: '九州' },
+    { code: '41', name_ja: '佐賀県', name_en: 'Saga', region: '九州' },
+    { code: '42', name_ja: '長崎県', name_en: 'Nagasaki', region: '九州' },
+    { code: '43', name_ja: '熊本県', name_en: 'Kumamoto', region: '九州' },
+    { code: '44', name_ja: '大分県', name_en: 'Oita', region: '九州' },
+    { code: '45', name_ja: '宮崎県', name_en: 'Miyazaki', region: '九州' },
+    { code: '46', name_ja: '鹿児島県', name_en: 'Kagoshima', region: '九州' },
+    { code: '47', name_ja: '沖縄県', name_en: 'Okinawa', region: '九州' },
   ];
 
   for (const pref of prefectures) {
@@ -69,60 +110,6 @@ export async function runSeed(db: Database): Promise<void> {
       source_url: 'https://www.kyoukaikenpo.or.jp/',
       notes: '令和8年度新設'
     },
-    {
-      prefecture_code: '01',
-      rate_type: 'health_insurance',
-      rate_percentage: 10.28,
-      employee_burden_percentage: 5.14,
-      effective_from: '2026-03-01',
-      source_url: 'https://www.kyoukaikenpo.or.jp/about/business/insurance_rate/rate_prefectures/r08/index.html',
-      notes: '令和8年度 北海道（2026年3月分から適用）'
-    },
-    {
-      prefecture_code: '07',
-      rate_type: 'health_insurance',
-      rate_percentage: 9.50,
-      employee_burden_percentage: 4.75,
-      effective_from: '2026-03-01',
-      source_url: 'https://www.kyoukaikenpo.or.jp/about/business/insurance_rate/rate_prefectures/r08/index.html',
-      notes: '令和8年度 福島県（2026年3月分から適用、令和7年度9.62%から引下げ）'
-    },
-    {
-      prefecture_code: '13',
-      rate_type: 'health_insurance',
-      rate_percentage: 9.85,
-      employee_burden_percentage: 4.925,
-      effective_from: '2026-03-01',
-      source_url: 'https://www.kyoukaikenpo.or.jp/about/business/insurance_rate/rate_prefectures/r08/index.html',
-      notes: '令和8年度 東京都（2026年3月分から適用）'
-    },
-    {
-      prefecture_code: '14',
-      rate_type: 'health_insurance',
-      rate_percentage: 9.92,
-      employee_burden_percentage: 4.96,
-      effective_from: '2026-03-01',
-      source_url: 'https://www.kyoukaikenpo.or.jp/about/business/insurance_rate/rate_prefectures/r08/index.html',
-      notes: '令和8年度 神奈川県（特例措置で据置き、2026年3月分から適用）'
-    },
-    {
-      prefecture_code: '27',
-      rate_type: 'health_insurance',
-      rate_percentage: 10.13,
-      employee_burden_percentage: 5.065,
-      effective_from: '2026-03-01',
-      source_url: 'https://www.kyoukaikenpo.or.jp/about/business/insurance_rate/rate_prefectures/r08/index.html',
-      notes: '令和8年度 大阪府（2026年3月分から適用）'
-    },
-    {
-      prefecture_code: '40',
-      rate_type: 'health_insurance',
-      rate_percentage: 10.11,
-      employee_burden_percentage: 5.055,
-      effective_from: '2026-03-01',
-      source_url: 'https://www.kyoukaikenpo.or.jp/about/business/insurance_rate/rate_prefectures/r08/index.html',
-      notes: '令和8年度 福岡県（2026年3月分から適用）'
-    },
   ];
 
   for (const rate of rates2026) {
@@ -140,6 +127,32 @@ export async function runSeed(db: Database): Promise<void> {
         rate.source_url,
         rate.notes
       ]
+    );
+  }
+
+  // 健康保険料率（令和8年度・全47都道府県、2026年3月分から適用）
+  const healthRates2026: Array<{ code: string; rate: number }> = [
+    { code: '01', rate: 10.28 }, { code: '02', rate: 9.85 }, { code: '03', rate: 9.51 }, { code: '04', rate: 10.1 },
+    { code: '05', rate: 10.01 }, { code: '06', rate: 9.75 }, { code: '07', rate: 9.5 }, { code: '08', rate: 9.52 },
+    { code: '09', rate: 9.82 }, { code: '10', rate: 9.68 }, { code: '11', rate: 9.67 }, { code: '12', rate: 9.73 },
+    { code: '13', rate: 9.85 }, { code: '14', rate: 9.92 }, { code: '15', rate: 9.21 }, { code: '16', rate: 9.59 },
+    { code: '17', rate: 9.7 }, { code: '18', rate: 9.71 }, { code: '19', rate: 9.55 }, { code: '20', rate: 9.63 },
+    { code: '21', rate: 9.8 }, { code: '22', rate: 9.61 }, { code: '23', rate: 9.93 }, { code: '24', rate: 9.77 },
+    { code: '25', rate: 9.88 }, { code: '26', rate: 9.89 }, { code: '27', rate: 10.13 }, { code: '28', rate: 10.12 },
+    { code: '29', rate: 9.91 }, { code: '30', rate: 10.06 }, { code: '31', rate: 9.86 }, { code: '32', rate: 9.94 },
+    { code: '33', rate: 10.05 }, { code: '34', rate: 9.78 }, { code: '35', rate: 10.15 }, { code: '36', rate: 10.24 },
+    { code: '37', rate: 10.02 }, { code: '38', rate: 9.98 }, { code: '39', rate: 10.05 }, { code: '40', rate: 10.11 },
+    { code: '41', rate: 10.55 }, { code: '42', rate: 10.06 }, { code: '43', rate: 10.08 }, { code: '44', rate: 10.08 },
+    { code: '45', rate: 9.77 }, { code: '46', rate: 10.13 }, { code: '47', rate: 9.44 },
+  ];
+
+  for (const hr of healthRates2026) {
+    await db.run(
+      `INSERT OR IGNORE INTO insurance_rates
+       (prefecture_code, rate_type, rate_percentage, employee_burden_percentage,
+        effective_from, source_url, notes, verified_at)
+       VALUES (?, 'health_insurance', ?, ?, '2026-03-01', ?, ?, datetime('now'))`,
+      [hr.code, hr.rate, Math.round(hr.rate / 2 * 1000) / 1000, 'https://www.kyoukaikenpo.or.jp/about/business/insurance_rate/rate_prefectures/r08/index.html', '令和8年度（2026年3月分から適用）']
     );
   }
 
