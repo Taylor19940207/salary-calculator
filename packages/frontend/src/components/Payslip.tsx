@@ -86,9 +86,9 @@ export default function Payslip({ result, input, onClose }: Props) {
       null,
     ],
     [
-      ['通勤手当', (input.commutingAllowance || 0).toLocaleString()],
+      ['通勤手当（非課税）', (input.commutingAllowance || 0).toLocaleString()],
+      ['出張手当（非課税）', (input.businessTripAllowance || 0).toLocaleString()],
       ['その他手当', (input.otherAllowances || 0).toLocaleString()],
-      null,
       null,
       null,
       null,

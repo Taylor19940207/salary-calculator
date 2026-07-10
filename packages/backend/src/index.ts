@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { timingSafeEqual } from 'crypto';
 import { calculateSalary } from './services/salaryCalculator.js';
-import { getPrefectures, getInsuranceRates } from './db/queries.js';
+import { getPrefectures, getInsuranceRates, getGrades } from './db/queries.js';
 import { ensureDatabase } from './db/setup.js';
 import batchRoutes from './routes/batch.js';
 
@@ -66,6 +66,18 @@ app.get('/api/prefectures', async (req, res) => {
   }
 });
 
+// 標準報酬月額等級表（手動選択UI用）
+app.get('/api/grades', async (req, res) => {
+  try {
+    const date = req.query.date ? new Date(req.query.date as string) : new Date();
+    const grades = await getGrades(date);
+    res.json(grades);
+  } catch (error) {
+    console.error('Error fetching grades:', error);
+    res.status(500).json({ error: 'Failed to fetch grades' });
+  }
+});
+
 // 保険料率取得
 app.get('/api/rates', async (req, res) => {
   try {
@@ -92,6 +104,7 @@ const SalaryInputSchema = z.object({
   hourlyWage: z.number().optional(),
   totalWorkHours: z.number().optional(),
   commutingAllowance: z.number().default(0),
+  businessTripAllowance: z.number().min(0).optional(),
   otherAllowances: z.number().default(0),
   prefecture: z.string(),
   salaryMonth: z.string().regex(/^\d{4}-\d{2}$/),
@@ -105,6 +118,7 @@ const SalaryInputSchema = z.object({
   }).optional(),
   absenceDays: z.number().optional(),
   scheduledMonthlyHours: z.number().min(1).max(250).optional(), // 月所定労働時間（省略時160h）
+  manualGrade: z.number().int().min(1).max(50).optional(),      // 社保等級の手動指定
 });
 
 app.post('/api/calculate', async (req, res) => {

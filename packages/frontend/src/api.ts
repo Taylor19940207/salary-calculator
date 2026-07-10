@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { SalaryInput, SalaryCalculationResult, Prefecture } from './types';
+import type { SalaryInput, SalaryCalculationResult, Prefecture, GradeInfo } from './types';
 
 // 開発時はバックエンド(:3001)へ直接、本番は同一オリジンから配信されるため相対パス
 const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3001' : '');
@@ -15,6 +15,11 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
 
 export async function getPrefectures(): Promise<Prefecture[]> {
   const response = await api.get<Prefecture[]>('/api/prefectures');
+  return response.data;
+}
+
+export async function getGrades(date?: string): Promise<GradeInfo[]> {
+  const response = await api.get<GradeInfo[]>('/api/grades', { params: { date } });
   return response.data;
 }
 

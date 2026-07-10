@@ -143,12 +143,14 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
   }
 
   // 手当追加
+  const businessTripAllowance = input.businessTripAllowance || 0;
   grossSalary += input.commutingAllowance + input.otherAllowances;
 
   if (input.commutingAllowance > 0) {
     breakdown.income.push({
-      label: '通勤手当',
+      label: '通勤手当（非課税）',
       amount: input.commutingAllowance,
+      description: '所得税非課税・社会保険の報酬には算入',
     });
   }
 
@@ -159,10 +161,23 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
     });
   }
 
-  // 2. 標準報酬月額の計算
+  // 出張手当は実費弁償のため報酬に該当せず、社保基数の判定前に加算しない
+  // （支給額としては総支給に含めて表示する）
+  const remunerationForGrade = grossSalary;
+  grossSalary += businessTripAllowance;
+
+  if (businessTripAllowance > 0) {
+    breakdown.income.push({
+      label: '出張手当（非課税）',
+      amount: businessTripAllowance,
+      description: '実費弁償のため所得税非課税・社会保険の報酬にも不算入',
+    });
+  }
+
+  // 2. 標準報酬月額の計算（出張手当を除いた報酬で判定、手動等級指定があれば優先）
   const targetDate = new Date(input.salaryMonth + '-01');
   const { amount: standardMonthlyRemuneration, grade: healthGrade } =
-    await calculateStandardRemuneration(grossSalary, targetDate);
+    await calculateStandardRemuneration(remunerationForGrade, targetDate, input.manualGrade);
 
   // 厚生年金は健保と等級表が異なるため別途算出
   const pensionStandardRemuneration = toPensionStandardRemuneration(standardMonthlyRemuneration);
@@ -176,9 +191,10 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
       total: ratesMap.health_insurance?.rate_percentage || 0,
       employee: ratesMap.health_insurance?.employee_burden_percentage || 0,
     },
+    // 介護保険第2号被保険者は40〜64歳。65歳以降は第1号となり給与天引きされない
     nursingCare: {
-      total: input.age >= 40 ? (ratesMap.nursing_care?.rate_percentage || 0) : 0,
-      employee: input.age >= 40 ? (ratesMap.nursing_care?.employee_burden_percentage || 0) : 0,
+      total: input.age >= 40 && input.age <= 64 ? (ratesMap.nursing_care?.rate_percentage || 0) : 0,
+      employee: input.age >= 40 && input.age <= 64 ? (ratesMap.nursing_care?.employee_burden_percentage || 0) : 0,
     },
     employeePension: {
       total: ratesMap.pension?.rate_percentage || 0,
@@ -212,7 +228,8 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
   };
 
   if (input.enrollInInsurance) {
-    const healthGradeLabel = healthGrade !== null ? `健保等級 第${healthGrade}級・` : '';
+    const manualNote = input.manualGrade ? '【手動指定】' : '';
+    const healthGradeLabel = healthGrade !== null ? `${manualNote}健保等級 第${healthGrade}級・` : '';
     // 健康保険
     deductions.healthInsurance = roundEmployeeBurden(
       standardMonthlyRemuneration * (insuranceRates.healthInsurance.employee / 100)
@@ -224,8 +241,8 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
       sourceUrl: insuranceRates.sourceUrls.healthInsurance,
     });
 
-    // 介護保険（40歳以上）
-    if (input.age >= 40) {
+    // 介護保険（第2号被保険者: 40〜64歳。65歳以降は年金からの特別徴収となり給与控除なし）
+    if (input.age >= 40 && input.age <= 64) {
       deductions.nursingCare = roundEmployeeBurden(
         standardMonthlyRemuneration * (insuranceRates.nursingCare.employee / 100)
       );
@@ -264,19 +281,22 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
     });
 
     // 雇用保険（被保険者負担分も50銭以下切捨て・50銭超切上げ）
+    // 出張旅費は実費弁償のため賃金に含めない
+    const wageForUnemployment = grossSalary - businessTripAllowance;
     deductions.unemployment = roundEmployeeBurden(
-      grossSalary * (insuranceRates.unemployment.employee / 100)
+      wageForUnemployment * (insuranceRates.unemployment.employee / 100)
     );
     breakdown.deductions.push({
       label: '雇用保険',
       amount: deductions.unemployment,
-      calculation: `賃金総額 ¥${grossSalary.toLocaleString()} × ${insuranceRates.unemployment.employee}%（総料率 ${insuranceRates.unemployment.total}%、事業主負担 ${Math.round((insuranceRates.unemployment.total - insuranceRates.unemployment.employee) * 1000) / 1000}%）`,
+      calculation: `賃金総額 ¥${wageForUnemployment.toLocaleString()} × ${insuranceRates.unemployment.employee}%（総料率 ${insuranceRates.unemployment.total}%、事業主負担 ${Math.round((insuranceRates.unemployment.total - insuranceRates.unemployment.employee) * 1000) / 1000}%）`,
       sourceUrl: insuranceRates.sourceUrls.unemployment,
     });
   }
 
-  // 5. 所得税計算
-  const taxableIncome = grossSalary - input.commutingAllowance -
+  // 5. 所得税計算（通勤手当・出張手当は非課税）
+  const nonTaxable = input.commutingAllowance + businessTripAllowance;
+  const taxableIncome = grossSalary - nonTaxable -
     deductions.healthInsurance - deductions.nursingCare -
     deductions.employeePension - deductions.unemployment -
     deductions.childSupport;
@@ -285,7 +305,7 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
   breakdown.deductions.push({
     label: '所得税（源泉徴収）',
     amount: deductions.incomeTax,
-    calculation: `課税対象額¥${taxableIncome.toLocaleString()}（通勤非課税¥${input.commutingAllowance.toLocaleString()}控除後）、扶養${input.dependents}人、令和8年分月額表甲欄`,
+    calculation: `課税対象額¥${taxableIncome.toLocaleString()}（非課税手当¥${nonTaxable.toLocaleString()}控除後）、扶養${input.dependents}人、令和8年分月額表甲欄`,
   });
 
   // 総控除額

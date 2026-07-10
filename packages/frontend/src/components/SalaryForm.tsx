@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import type { SalaryInput, Prefecture } from '../types';
+import { useEffect, useState } from 'react';
+import { getGrades } from '../api';
+import type { SalaryInput, Prefecture, GradeInfo } from '../types';
 
 interface Props {
   onCalculate: (input: SalaryInput) => void;
@@ -13,6 +14,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
   const [hourlyWage, setHourlyWage] = useState('1500');
   const [totalWorkHours, setTotalWorkHours] = useState('160');
   const [commutingAllowance, setCommutingAllowance] = useState('10000');
+  const [businessTripAllowance, setBusinessTripAllowance] = useState('0');
   const [otherAllowances, setOtherAllowances] = useState('0');
   const [prefecture, setPrefecture] = useState('13'); // 東京都
   const [salaryMonth, setSalaryMonth] = useState('2026-05');
@@ -25,6 +27,12 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
   const [overtimeNight, setOvertimeNight] = useState('0');
   const [absenceDays, setAbsenceDays] = useState('0');
   const [scheduledMonthlyHours, setScheduledMonthlyHours] = useState('160');
+  const [manualGrade, setManualGrade] = useState(''); // '' = 自動判定
+  const [grades, setGrades] = useState<GradeInfo[]>([]);
+
+  useEffect(() => {
+    getGrades().then(setGrades).catch(() => setGrades([]));
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,12 +43,14 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
       hourlyWage: salaryType === 'hourly' ? Number(hourlyWage) : undefined,
       totalWorkHours: salaryType === 'hourly' ? Number(totalWorkHours) : undefined,
       commutingAllowance: Number(commutingAllowance),
+      businessTripAllowance: Number(businessTripAllowance) || undefined,
       otherAllowances: Number(otherAllowances),
       prefecture,
       salaryMonth,
       age: Number(age),
       dependents: Number(dependents),
       enrollInInsurance,
+      manualGrade: manualGrade ? Number(manualGrade) : undefined,
     };
 
     if (showOvertime) {
@@ -148,7 +158,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              通勤手当
+              通勤手当（非課税）
             </label>
             <div className="relative">
               <input
@@ -159,7 +169,25 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
               />
               <span className="absolute right-4 top-2.5 text-gray-500">円</span>
             </div>
+            <p className="mt-1 text-xs text-gray-400">所得税は非課税・社会保険の基数には算入</p>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              出張手当（非課税）
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                value={businessTripAllowance}
+                onChange={(e) => setBusinessTripAllowance(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
+              <span className="absolute right-4 top-2.5 text-gray-500">円</span>
+            </div>
+            <p className="mt-1 text-xs text-gray-400">実費弁償のため非課税・社会保険の基数にも不算入</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               その他手当
@@ -254,10 +282,34 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
               健康保険・介護保険・厚生年金に加入する
             </span>
             <span className="block text-xs text-gray-500 mt-1">
-              正社員や週30h以上の勤務者は原則加入。雇用保険は週20h以上で自動判定。
+              正社員や週30h以上の勤務者は原則加入。雇用保険は週20h以上で自動判定。介護保険は40〜64歳のみ。
             </span>
           </label>
         </div>
+
+        {/* 社保等級（標準報酬月額）の指定 */}
+        {enrollInInsurance && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              社保等級（標準報酬月額）
+            </label>
+            <select
+              value={manualGrade}
+              onChange={(e) => setManualGrade(e.target.value)}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            >
+              <option value="">自動判定（今月の総支給額から）</option>
+              {grades.map((g) => (
+                <option key={g.grade_number} value={g.grade_number}>
+                  第{g.grade_number}級　標準報酬月額 ¥{g.standard_amount.toLocaleString()}（報酬 {g.min_amount.toLocaleString()}〜{g.max_amount >= 9999999 ? '' : g.max_amount.toLocaleString()}円）
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-400">
+              実務では入社時・定時決定（算定基礎届）・随時改定で決まった等級が使われるため、残業などで今月の支給額が変動しても等級は変わりません。会社で決定済みの等級があればこちらで指定してください。
+            </p>
+          </div>
+        )}
 
         {/* 残業・欠勤（展開可能） */}
         <div>

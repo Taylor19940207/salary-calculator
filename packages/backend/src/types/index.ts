@@ -24,7 +24,8 @@ export interface SalaryInput {
   totalWorkHours?: number;
 
   // 共通
-  commutingAllowance: number;
+  commutingAllowance: number;          // 通勤手当（非課税・社保基数には算入）
+  businessTripAllowance?: number;      // 出張手当（非課税・実費弁償のため社保基数にも不算入）
   otherAllowances: number;
   prefecture: string;
   salaryMonth: string; // YYYY-MM format
@@ -42,6 +43,7 @@ export interface SalaryInput {
   };
   absenceDays?: number;
   scheduledMonthlyHours?: number; // 月所定労働時間（省略時160h）。祝日の多い月は少なくなる
+  manualGrade?: number;           // 社保等級の手動指定（健保等級番号1〜50、省略時は総支給額から自動判定）
 }
 
 export interface SalaryCalculationResult {

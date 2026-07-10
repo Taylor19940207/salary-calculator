@@ -16,6 +16,7 @@ export async function runSeed(db: Database): Promise<void> {
   // 都道府県データ
   const prefectures = [
     { code: '01', name_ja: '北海道', name_en: 'Hokkaido', region: '北海道' },
+    { code: '07', name_ja: '福島県', name_en: 'Fukushima', region: '東北' },
     { code: '13', name_ja: '東京都', name_en: 'Tokyo', region: '関東' },
     { code: '14', name_ja: '神奈川県', name_en: 'Kanagawa', region: '関東' },
     { code: '27', name_ja: '大阪府', name_en: 'Osaka', region: '近畿' },
@@ -76,6 +77,15 @@ export async function runSeed(db: Database): Promise<void> {
       effective_from: '2026-03-01',
       source_url: 'https://www.kyoukaikenpo.or.jp/about/business/insurance_rate/rate_prefectures/r08/index.html',
       notes: '令和8年度 北海道（2026年3月分から適用）'
+    },
+    {
+      prefecture_code: '07',
+      rate_type: 'health_insurance',
+      rate_percentage: 9.50,
+      employee_burden_percentage: 4.75,
+      effective_from: '2026-03-01',
+      source_url: 'https://www.kyoukaikenpo.or.jp/about/business/insurance_rate/rate_prefectures/r08/index.html',
+      notes: '令和8年度 福島県（2026年3月分から適用、令和7年度9.62%から引下げ）'
     },
     {
       prefecture_code: '13',

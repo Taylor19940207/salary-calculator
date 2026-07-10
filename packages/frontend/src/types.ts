@@ -19,6 +19,7 @@ export interface SalaryInput {
   hourlyWage?: number;
   totalWorkHours?: number;
   commutingAllowance: number;
+  businessTripAllowance?: number; // 出張手当（非課税・社保基数にも不算入）
   otherAllowances: number;
   prefecture: string;
   salaryMonth: string;
@@ -32,6 +33,14 @@ export interface SalaryInput {
   };
   absenceDays?: number;
   scheduledMonthlyHours?: number; // 月所定労働時間（省略時160h）
+  manualGrade?: number;           // 社保等級の手動指定（1〜50、省略時は自動判定）
+}
+
+export interface GradeInfo {
+  grade_number: number;
+  min_amount: number;
+  max_amount: number;
+  standard_amount: number;
 }
 
 export interface SalaryCalculationResult {

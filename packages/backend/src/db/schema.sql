@@ -26,6 +26,10 @@ CREATE TABLE IF NOT EXISTS insurance_rates (
 CREATE INDEX IF NOT EXISTS idx_rates_lookup
   ON insurance_rates(prefecture_code, rate_type, effective_from DESC);
 
+-- 起動時シードの冪等性を保証（INSERT OR IGNORE がこの制約で重複を弾く）
+CREATE UNIQUE INDEX IF NOT EXISTS uq_rates_identity
+  ON insurance_rates(COALESCE(prefecture_code, ''), rate_type, effective_from);
+
 -- 料率更新ログ
 CREATE TABLE IF NOT EXISTS rate_update_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,3 +58,6 @@ CREATE TABLE IF NOT EXISTS standard_remuneration_grades (
 
 CREATE INDEX IF NOT EXISTS idx_grades_lookup
   ON standard_remuneration_grades(min_amount, max_amount, effective_from DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_grades_identity
+  ON standard_remuneration_grades(grade_number, effective_from, insurance_type);

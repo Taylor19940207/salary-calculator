@@ -15,6 +15,7 @@ const BatchCalculateSchema = z.object({
     hourlyWage: z.number().optional(),
     totalWorkHours: z.number().optional(),
     commutingAllowance: z.number().default(0),
+    businessTripAllowance: z.number().min(0).optional(),
     otherAllowances: z.number().default(0),
     prefecture: z.string(),
     salaryMonth: z.string().regex(/^\d{4}-\d{2}$/),
@@ -28,6 +29,7 @@ const BatchCalculateSchema = z.object({
     }).optional(),
     absenceDays: z.number().optional(),
     scheduledMonthlyHours: z.number().min(1).max(250).optional(),
+    manualGrade: z.number().int().min(1).max(50).optional(),
   })).min(1).max(100) // 最多一次處理 100 人
 });
 
@@ -58,6 +60,7 @@ router.post('/calculate/batch', async (req, res) => {
           hourlyWage: employee.hourlyWage,
           totalWorkHours: employee.totalWorkHours,
           commutingAllowance: employee.commutingAllowance,
+          businessTripAllowance: employee.businessTripAllowance,
           otherAllowances: employee.otherAllowances,
           prefecture: employee.prefecture,
           salaryMonth: employee.salaryMonth,
@@ -67,6 +70,7 @@ router.post('/calculate/batch', async (req, res) => {
           overtime: employee.overtime,
           absenceDays: employee.absenceDays,
           scheduledMonthlyHours: employee.scheduledMonthlyHours,
+          manualGrade: employee.manualGrade,
         };
 
         const result = await calculateSalary(input);
