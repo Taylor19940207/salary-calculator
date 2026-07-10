@@ -1,0 +1,22 @@
+{
+  "name": "japan-salary-calculator",
+  "version": "1.0.0",
+  "description": "Japanese salary calculator with real-time insurance rate updates",
+  "private": true,
+  "workspaces": [
+    "packages/frontend",
+    "packages/backend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "npm run dev --workspace=packages/frontend",
+    "dev:backend": "npm run dev --workspace=packages/backend",
+    "build": "npm run build --workspace=packages/frontend",
+    "start": "npm run start --workspace=packages/backend",
+    "db:migrate": "npm run migrate --workspace=packages/backend",
+    "db:seed": "npm run seed --workspace=packages/backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

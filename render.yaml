@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: salary-calculator
+    runtime: node
+    plan: free # 常駐させたい場合は starter に変更
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_PATH
+        value: /tmp/salary_calculator.db
+      - key: BASIC_AUTH_USER
+        sync: false # Render ダッシュボードで設定
+      - key: BASIC_AUTH_PASS
+        sync: false # Render ダッシュボードで設定
