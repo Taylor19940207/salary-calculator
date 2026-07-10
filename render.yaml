@@ -3,12 +3,12 @@ services:
     name: salary-calculator
     runtime: node
     plan: free # 常駐させたい場合は starter に変更
-    buildCommand: npm ci && npm run build
+    # --include=dev: Render は NODE_ENV=production を自動注入するため、
+    # 明示しないと npm ci が devDependencies (vite/tsc/@types) をスキップしてビルドが壊れる
+    buildCommand: npm ci --include=dev && npm run build
     startCommand: npm run start
     healthCheckPath: /api/health
     envVars:
-      # NODE_ENV=production は設定しないこと:
-      # npm ci が devDependencies (vite/tsc/@types) をスキップしてビルドが壊れる
       - key: DATABASE_PATH
         value: /tmp/salary_calculator.db
       - key: BASIC_AUTH_USER
