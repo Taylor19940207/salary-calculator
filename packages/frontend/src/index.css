@@ -12,6 +12,17 @@ body {
   background-color: #f5f5f5;
 }
 
+/* 数値入力の上下スピナーを非表示（「円」ラベルと矢印の重なりを防ぐ） */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 /* 給与明細の印刷: 明細のみを1ページに出力 */
 @media print {
   body {
@@ -33,11 +44,17 @@ body {
     box-shadow: none !important;
     border-radius: 0 !important;
   }
-  #payslip-body {
+  /* 1 明細 = 1 ページ。賞与ありのときは給与(1枚目)＋賞与(2枚目)を1ファイルで出力 */
+  .payslip-page {
     padding: 12mm !important;
   }
-  #payslip-body,
-  #payslip-body * {
+  /* 2 枚目（賞与）は改ページしてから出す */
+  .payslip-break {
+    break-before: page;
+    page-break-before: always;
+  }
+  .payslip-page,
+  .payslip-page * {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }

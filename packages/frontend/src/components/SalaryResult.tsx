@@ -1,19 +1,23 @@
 import { useState } from 'react';
-import type { SalaryInput, SalaryCalculationResult } from '../types';
+import type { SalaryInput, SalaryCalculationResult, BonusInput, BonusCalculationResult } from '../types';
 import Payslip from './Payslip';
 
 interface Props {
   result: SalaryCalculationResult;
   input: SalaryInput | null;
+  // 賞与あり: 明細出力を給与＋賞与の2ページ1ファイルにする
+  bonusResult?: BonusCalculationResult | null;
+  bonusInput?: BonusInput | null;
 }
 
-export default function SalaryResult({ result, input }: Props) {
+export default function SalaryResult({ result, input, bonusResult, bonusInput }: Props) {
   const [showPayslip, setShowPayslip] = useState(false);
+  const hasBonus = !!(bonusResult && bonusInput);
 
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       {/* 手取額 */}
-      <div className="bg-gradient-to-r from-green-400 to-green-500 p-8 text-white">
+      <div className="bg-gradient-to-r from-teal-400 to-teal-500 p-8 text-white">
         <div className="flex justify-between items-start">
           <h2 className="text-lg font-medium mb-2">手取り額</h2>
           {input && (
@@ -21,7 +25,7 @@ export default function SalaryResult({ result, input }: Props) {
               onClick={() => setShowPayslip(true)}
               className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium backdrop-blur transition-colors"
             >
-              📄 給与明細を出力
+              📄 {hasBonus ? '給与・賞与明細を出力' : '給与明細を出力'}
             </button>
           )}
         </div>
@@ -31,7 +35,13 @@ export default function SalaryResult({ result, input }: Props) {
       </div>
 
       {showPayslip && input && (
-        <Payslip result={result} input={input} onClose={() => setShowPayslip(false)} />
+        <Payslip
+          result={result}
+          input={input}
+          onClose={() => setShowPayslip(false)}
+          bonusResult={bonusResult ?? undefined}
+          bonusInput={bonusInput ?? undefined}
+        />
       )}
 
       <div className="p-6 space-y-6">
@@ -67,7 +77,7 @@ export default function SalaryResult({ result, input }: Props) {
                     <p className="text-xs text-gray-500">{item.description}</p>
                   )}
                 </div>
-                <p className={`font-semibold ${item.amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                <p className={`font-semibold ${item.amount < 0 ? 'text-red-600' : 'text-teal-600'}`}>
                   {item.amount < 0 ? '-' : '+'}¥{Math.abs(item.amount).toLocaleString()}
                 </p>
               </div>

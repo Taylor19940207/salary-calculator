@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { SalaryInput, SalaryCalculationResult } from '../types';
+import type { SalaryInput, SalaryCalculationResult, BonusInput, BonusCalculationResult } from '../types';
+import BonusPayslipBody from './BonusPayslipBody';
 
 interface Props {
   result: SalaryCalculationResult;
@@ -14,6 +15,10 @@ interface Props {
   defaultPaymentDate?: string;
   defaultPeriodStart?: string;
   defaultPeriodEnd?: string;
+  // 賞与あり: 給与明細(1枚目)に続けて賞与明細(2枚目)を同一ファイルで出力する
+  bonusResult?: BonusCalculationResult;
+  bonusInput?: BonusInput;
+  defaultBonusPaymentDate?: string;
 }
 
 const TEAL = '#4db6ac';
@@ -58,6 +63,9 @@ export default function Payslip({
   defaultPaymentDate,
   defaultPeriodStart,
   defaultPeriodEnd,
+  bonusResult,
+  bonusInput,
+  defaultBonusPaymentDate,
 }: Props) {
   const [companyName, setCompanyName] = useState(defaultCompanyName || '株式会社サンプル');
   const [employeeName, setEmployeeName] = useState(defaultEmployeeName || '山田 太郎');
@@ -66,6 +74,8 @@ export default function Payslip({
   const [paymentDate, setPaymentDate] = useState(defaultPaymentDate || '');
   const [periodStart, setPeriodStart] = useState(defaultPeriodStart || period0.start);
   const [periodEnd, setPeriodEnd] = useState(defaultPeriodEnd || period0.end);
+  const [bonusPaymentDate, setBonusPaymentDate] = useState(defaultBonusPaymentDate || '');
+  const hasBonus = !!(bonusResult && bonusInput);
 
   // 印刷時に明細以外を隠すためのマーカー
   useEffect(() => {
@@ -89,7 +99,8 @@ export default function Payslip({
   const handlePrint = () => {
     const original = document.title;
     const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, '').trim();
-    const parts = [safe(companyName), safe(employeeName), `${y}年${m}月給与明細`].filter(Boolean);
+    const docType = hasBonus ? `${y}年${m}月給与・賞与明細` : `${y}年${m}月給与明細`;
+    const parts = [safe(companyName), safe(employeeName), docType].filter(Boolean);
     document.title = parts.join('-');
     const restore = () => {
       document.title = original;
@@ -206,7 +217,7 @@ export default function Payslip({
       <div className="max-w-4xl mx-auto my-8 bg-white rounded-lg shadow-xl print:shadow-none print:my-0 print:rounded-none">
         {/* ツールバー（印刷時非表示） */}
         <div className="flex justify-between items-center px-6 py-4 border-b print:hidden">
-          <div className="flex gap-4 items-center text-sm">
+          <div className="flex gap-4 items-center text-sm flex-wrap">
             <label>
               会社名:
               <input
@@ -256,13 +267,24 @@ export default function Payslip({
                 className="px-2 py-1 border rounded"
               />
             </label>
+            {hasBonus && (
+              <label>
+                賞与支給日:
+                <input
+                  type="date"
+                  value={bonusPaymentDate}
+                  onChange={(e) => setBonusPaymentDate(e.target.value)}
+                  className="ml-1 px-2 py-1 border rounded"
+                />
+              </label>
+            )}
           </div>
           <div className="flex gap-2">
             <button
               onClick={handlePrint}
               className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700"
             >
-              🖨 印刷 / PDF保存
+              🖨 {hasBonus ? '給与＋賞与を印刷 / PDF保存' : '印刷 / PDF保存'}
             </button>
             <button
               onClick={onClose}
@@ -273,8 +295,8 @@ export default function Payslip({
           </div>
         </div>
 
-        {/* 明細書本体 */}
-        <div id="payslip-body" className="p-8">
+        {/* 明細書本体（給与＝1枚目） */}
+        <div className="payslip-page p-8">
           <h1 className="text-center text-2xl font-bold mb-6">
             {y}年{m}月分　給与支払明細書
           </h1>
@@ -338,6 +360,20 @@ export default function Payslip({
             ※ 住民税は市区町村ごとに異なるため含まれていません。本明細は計算ツールによる参考値です。
           </p>
         </div>
+
+        {/* 賞与あり: 2 枚目として賞与明細を同一ファイルに続ける（画面上は区切り線、印刷では改ページ） */}
+        {hasBonus && (
+          <div className="payslip-break border-t-8 border-gray-100 print:border-0">
+            <BonusPayslipBody
+              result={bonusResult!}
+              input={bonusInput!}
+              companyName={companyName}
+              employeeName={employeeName}
+              employeeNo={employeeNo}
+              paymentDate={bonusPaymentDate}
+            />
+          </div>
+        )}
       </div>
     </div>,
     document.body

@@ -8,7 +8,8 @@ import {
 
 // 所得税計算（令和8年分 源泉徴収税額表 月額表・甲欄による査表方式）
 // 紙の税額表と1円単位で一致するため、年末調整との差額が出ない
-function calculateIncomeTax(socialInsuranceDeductedSalary: number, dependents: number): number {
+// 賞与の特例（前月給与なし・10倍超）でも月額表を使うため export する
+export function calculateIncomeTax(socialInsuranceDeductedSalary: number, dependents: number): number {
   const A = Math.floor(socialInsuranceDeductedSalary); // その月の社会保険料等控除後の給与等の金額
   if (A < 105000) return 0; // 105,000円未満は扶養人数にかかわらず0円
 
@@ -58,7 +59,7 @@ function toPensionGrade(healthGrade: number | null): number | null {
 }
 
 // 被保険者負担分の端数処理: 50銭以下切捨て、50銭超切上げ（健康保険法167条等）
-function roundEmployeeBurden(amount: number): number {
+export function roundEmployeeBurden(amount: number): number {
   const floor = Math.floor(amount);
   return amount - floor <= 0.5 ? floor : floor + 1;
 }

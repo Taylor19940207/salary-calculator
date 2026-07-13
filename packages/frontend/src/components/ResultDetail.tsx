@@ -21,7 +21,7 @@ export default function ResultDetail({ result }: Props) {
         </div>
         <div>
           <p className="text-gray-600 text-xs">手取額</p>
-          <p className="text-lg font-semibold text-green-600">¥{result.netSalary.toLocaleString()}</p>
+          <p className="text-lg font-semibold text-teal-600">¥{result.netSalary.toLocaleString()}</p>
         </div>
       </div>
 
@@ -37,7 +37,7 @@ export default function ResultDetail({ result }: Props) {
                     <p className="font-medium text-gray-700">{item.label}</p>
                     {item.description && <p className="text-xs text-gray-500">{item.description}</p>}
                   </div>
-                  <p className={`font-semibold ${item.amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                  <p className={`font-semibold ${item.amount < 0 ? 'text-red-600' : 'text-teal-600'}`}>
                     {item.amount < 0 ? '-' : '+'}¥{Math.abs(item.amount).toLocaleString()}
                   </p>
                 </div>

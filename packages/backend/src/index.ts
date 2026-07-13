@@ -7,6 +7,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { timingSafeEqual } from 'crypto';
 import { calculateSalary } from './services/salaryCalculator.js';
+import { calculateBonus } from './services/bonusCalculator.js';
 import { getPrefectures, getInsuranceRates, getGrades } from './db/queries.js';
 import { ensureDatabase } from './db/setup.js';
 import batchRoutes from './routes/batch.js';
@@ -144,6 +145,33 @@ app.post('/api/calculate', async (req, res) => {
 
     console.error('Error calculating salary:', error);
     res.status(500).json({ error: 'Failed to calculate salary' });
+  }
+});
+
+// 賞与（ボーナス）計算
+const BonusInputSchema = z.object({
+  bonusAmount: z.number().min(0),
+  prevMonthAfterInsurance: z.number().min(0).default(0),
+  prefecture: z.string(),
+  salaryMonth: z.string().regex(/^\d{4}-\d{2}$/),
+  age: z.number().min(15).max(100),
+  dependents: z.number().min(0).default(0),
+  enrollInInsurance: z.boolean().default(true),
+  priorFiscalBonusTotal: z.number().min(0).optional(),
+  bonusCalcMonths: z.number().int().min(1).max(12).optional(),
+});
+
+app.post('/api/calculate-bonus', async (req, res) => {
+  try {
+    const input = BonusInputSchema.parse(req.body);
+    const result = await calculateBonus(input);
+    res.json(result);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Invalid input', details: error.errors });
+    }
+    console.error('Error calculating bonus:', error);
+    res.status(500).json({ error: 'Failed to calculate bonus' });
   }
 });
 

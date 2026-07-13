@@ -29,6 +29,7 @@ npm run dev        # 前後端一起起（背景執行）
 - 通勤手当（非課稅・計入社保基數）、**出張手当（非課稅・不計入社保與雇用保險基數）**、その他手当
 - **社保等級手動選擇**（下拉 1–50 級，`/api/grades`，`manualGrade` 參數）
 - **給与支払明細書出力**（`Payslip.tsx`，青綠色四段式模板，React portal + `@page margin:0` 實現單頁乾淨 PDF 列印）
+- **賞与（ボーナス）計算**：單人/多人表單內「今月は賞与あり」開關（基本情報與給与共用、計算完全分離）。後端 `bonusCalculator.ts` + `POST /api/calculate-bonus`：標準賞与額 1,000 円未満切捨て、健保/介護/子育て年度累計上限 573 萬（`priorFiscalBonusTotal` 手動輸入既払累計）、厚年單次上限 150 萬、雇用保險對**賞与實額**×0.5%、所得稅走「賞与算出率表」甲欄（oracle: `bonusTaxRateTable2026.ts`，國稅廳 15-16.xls 機械抽取，8 扶養×21 帶，全率=基本率×1.021 驗證過）＋特例（前月給与なし/10 倍超 → 月額表÷6×6、期間>6 月÷12×12）。所得稅用整數運算 `floor(x×round(rate×1000)/100000)` 避免浮點逐円誤差。明細＝給与+賞与 1 檔 2 頁（`.payslip-break` 改頁、`BonusPayslipBody.tsx` 無勤怠欄）、賞与支給日為公司層級欄位（可在 Payslip toolbar 逐人覆寫，純顯示不進計算）。批量版集計サマリー給与/賞与分列、賞与靠従業員コード（唯一性有驗證）與行對應。CSV 匯入不支援賞与。
 
 ## 費率與計算的正確性基準（都經實測驗證，令和8年度 / R8-2026）
 - 厚生年金 18.3%、雇用保險 1.35%（勞 0.5%）、介護保險 1.62%、子育て支援金 0.23%
@@ -58,4 +59,5 @@ npm run dev        # 前後端一起起（背景執行）
 
 ## 驗證偏好
 - 抓官方 PDF/Excel 當 oracle、用 API 全件對照、playwright 模擬操作驗證列印
+- **vitest**（`packages/backend`，root 跑 `npm test`）：賞与計算 14 案例，in-memory DB（`DATABASE_PATH=':memory:'`）自動 seed。改計算邏輯必跑
 - 對照競品：salaryagent.itbank.co.jp（其高薪所得稅 74 萬以上有 bug、尾數處理不合規，不可盲信）

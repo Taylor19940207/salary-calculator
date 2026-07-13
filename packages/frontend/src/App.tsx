@@ -2,13 +2,22 @@ import { useState, useEffect } from 'react';
 import SalaryForm from './components/SalaryForm';
 import SalaryResult from './components/SalaryResult';
 import BatchCalculator from './components/BatchCalculator';
-import { calculateSalary, getPrefectures } from './api';
-import type { SalaryInput, SalaryCalculationResult, Prefecture } from './types';
+import BonusResult from './components/BonusResult';
+import { calculateSalary, calculateBonus, getPrefectures } from './api';
+import type {
+  SalaryInput,
+  SalaryCalculationResult,
+  BonusInput,
+  BonusCalculationResult,
+  Prefecture,
+} from './types';
 
 function App() {
   const [mode, setMode] = useState<'single' | 'batch'>('single');
   const [result, setResult] = useState<SalaryCalculationResult | null>(null);
   const [lastInput, setLastInput] = useState<SalaryInput | null>(null);
+  const [bonusResult, setBonusResult] = useState<BonusCalculationResult | null>(null);
+  const [bonusInput, setBonusInput] = useState<BonusInput | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
@@ -23,13 +32,19 @@ function App() {
       });
   }, []);
 
-  const handleCalculate = async (input: SalaryInput) => {
+  const handleCalculate = async (input: SalaryInput, bonus?: BonusInput) => {
     setLoading(true);
     setError(null);
     try {
-      const calculationResult = await calculateSalary(input);
+      // 給与と賞与は別計算。賞与ありなら並行して両方計算する
+      const [calculationResult, bonusCalculationResult] = await Promise.all([
+        calculateSalary(input),
+        bonus ? calculateBonus(bonus) : Promise.resolve(null),
+      ]);
       setResult(calculationResult);
       setLastInput(input);
+      setBonusResult(bonusCalculationResult);
+      setBonusInput(bonus ?? null);
     } catch (err) {
       console.error('Calculation error:', err);
       setError('計算中にエラーが発生しました。入力内容を確認してください。');
@@ -56,7 +71,7 @@ function App() {
                 onClick={() => setMode('single')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   mode === 'single'
-                    ? 'bg-green-600 text-white'
+                    ? 'bg-teal-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
@@ -66,7 +81,7 @@ function App() {
                 onClick={() => setMode('batch')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   mode === 'batch'
-                    ? 'bg-green-600 text-white'
+                    ? 'bg-teal-600 text-white'
                     : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
@@ -84,7 +99,7 @@ function App() {
           </div>
         )}
 
-        {mode === 'single' ? (
+        {mode === 'single' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
               <SalaryForm
@@ -94,8 +109,16 @@ function App() {
               />
             </div>
 
-            <div>
-              {result && <SalaryResult result={result} input={lastInput} />}
+            <div className="space-y-8">
+              {result && (
+                <SalaryResult
+                  result={result}
+                  input={lastInput}
+                  bonusResult={bonusResult}
+                  bonusInput={bonusInput}
+                />
+              )}
+              {bonusResult && <BonusResult result={bonusResult} />}
               {!result && !loading && (
                 <div className="bg-white rounded-lg shadow-sm p-8 text-center text-gray-500">
                   左側のフォームに入力して「計算する」をクリックしてください
@@ -103,15 +126,14 @@ function App() {
               )}
               {loading && (
                 <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto"></div>
                   <p className="mt-4 text-gray-600">計算中...</p>
                 </div>
               )}
             </div>
           </div>
-        ) : (
-          <BatchCalculator prefectures={prefectures} />
         )}
+        {mode === 'batch' && <BatchCalculator prefectures={prefectures} />}
 
         <footer className="mt-12 pt-8 border-t text-center text-sm text-gray-600">
           <p>

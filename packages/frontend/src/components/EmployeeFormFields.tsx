@@ -1,4 +1,4 @@
-import type { Prefecture, GradeInfo, SalaryInput } from '../types';
+import type { Prefecture, GradeInfo, SalaryInput, BonusInput } from '../types';
 
 // 多人版で 1 名分の入力を保持するドラフト。数値は文字列で保持し、
 // 計算時に draftToInput() で SalaryInput に変換する（単人版 SalaryForm と同じ流儀）。
@@ -24,6 +24,12 @@ export interface EmployeeDraft {
   overtimeNight: string;
   absenceDays: string;
   scheduledMonthlyHours: string;
+  // 賞与（今月支給があれば ON。給与とは別計算だが基本情報は共通）
+  hasBonus: boolean;
+  bonusAmount: string;
+  prevMonthAfterInsurance: string;
+  priorFiscalBonusTotal: string;
+  bonusCalcMonths: string;
 }
 
 export function createEmptyDraft(index: number): EmployeeDraft {
@@ -49,6 +55,27 @@ export function createEmptyDraft(index: number): EmployeeDraft {
     overtimeNight: '0',
     absenceDays: '0',
     scheduledMonthlyHours: '160',
+    // 賞与額・前月給与はダミー既定値を置かない（消し忘れ＝税率誤りに直結）
+    hasBonus: false,
+    bonusAmount: '',
+    prevMonthAfterInsurance: '',
+    priorFiscalBonusTotal: '0',
+    bonusCalcMonths: '6',
+  };
+}
+
+// 賞与ありのドラフトを BonusInput に変換（基本情報は給与と共通）
+export function draftToBonusInput(d: EmployeeDraft): BonusInput {
+  return {
+    bonusAmount: Number(d.bonusAmount),
+    prevMonthAfterInsurance: Number(d.prevMonthAfterInsurance) || 0,
+    prefecture: d.prefecture,
+    salaryMonth: d.salaryMonth,
+    age: Number(d.age),
+    dependents: Number(d.dependents),
+    enrollInInsurance: d.enrollInInsurance,
+    priorFiscalBonusTotal: Number(d.priorFiscalBonusTotal) || undefined,
+    bonusCalcMonths: Number(d.bonusCalcMonths) || undefined,
   };
 }
 
@@ -103,7 +130,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
             type="text"
             value={d.id}
             onChange={(e) => onChange({ id: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           />
         </div>
         <div>
@@ -112,7 +139,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
             type="text"
             value={d.name}
             onChange={(e) => onChange({ name: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           />
         </div>
       </div>
@@ -126,7 +153,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
             onClick={() => onChange({ salaryType: 'monthly' })}
             className={`flex-1 py-2 px-4 rounded-lg border ${
               d.salaryType === 'monthly'
-                ? 'bg-green-50 border-green-500 text-green-700'
+                ? 'bg-teal-50 border-teal-500 text-teal-700'
                 : 'bg-white border-gray-300 text-gray-700'
             }`}
           >
@@ -137,7 +164,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
             onClick={() => onChange({ salaryType: 'hourly' })}
             className={`flex-1 py-2 px-4 rounded-lg border ${
               d.salaryType === 'hourly'
-                ? 'bg-green-50 border-green-500 text-green-700'
+                ? 'bg-teal-50 border-teal-500 text-teal-700'
                 : 'bg-white border-gray-300 text-gray-700'
             }`}
           >
@@ -155,7 +182,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
               type="number"
               value={d.baseSalary}
               onChange={(e) => onChange({ baseSalary: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
             <span className="absolute right-4 top-2.5 text-gray-500">円</span>
           </div>
@@ -169,7 +196,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
                 type="number"
                 value={d.hourlyWage}
                 onChange={(e) => onChange({ hourlyWage: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
               <span className="absolute right-4 top-2.5 text-gray-500">円</span>
             </div>
@@ -181,7 +208,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
                 type="number"
                 value={d.totalWorkHours}
                 onChange={(e) => onChange({ totalWorkHours: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
               <span className="absolute right-4 top-2.5 text-gray-500">h/月</span>
             </div>
@@ -198,7 +225,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
               type="number"
               value={d.commutingAllowance}
               onChange={(e) => onChange({ commutingAllowance: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
             <span className="absolute right-4 top-2.5 text-gray-500">円</span>
           </div>
@@ -211,7 +238,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
               type="number"
               value={d.businessTripAllowance}
               onChange={(e) => onChange({ businessTripAllowance: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
             <span className="absolute right-4 top-2.5 text-gray-500">円</span>
           </div>
@@ -226,7 +253,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
               type="number"
               value={d.otherAllowances}
               onChange={(e) => onChange({ otherAllowances: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             />
             <span className="absolute right-4 top-2.5 text-gray-500">円</span>
           </div>
@@ -241,7 +268,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
             type="month"
             value={d.salaryMonth}
             onChange={(e) => onChange({ salaryMonth: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           />
         </div>
         <div>
@@ -249,7 +276,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
           <select
             value={d.prefecture}
             onChange={(e) => onChange({ prefecture: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           >
             {prefectures.map((pref) => (
               <option key={pref.code} value={pref.code}>
@@ -268,7 +295,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
             type="number"
             value={d.age}
             onChange={(e) => onChange({ age: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             min="15"
             max="100"
           />
@@ -279,7 +306,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
             type="number"
             value={d.dependents}
             onChange={(e) => onChange({ dependents: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
             min="0"
           />
         </div>
@@ -292,7 +319,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
           id={`enroll-${d.id}`}
           checked={d.enrollInInsurance}
           onChange={(e) => onChange({ enrollInInsurance: e.target.checked })}
-          className="mt-1 h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+          className="mt-1 h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
         />
         <label htmlFor={`enroll-${d.id}`} className="ml-3">
           <span className="block text-sm font-medium text-gray-700">
@@ -313,7 +340,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
           <select
             value={d.manualGrade}
             onChange={(e) => onChange({ manualGrade: e.target.value })}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           >
             <option value="">自動判定（今月の総支給額から）</option>
             {grades.map((g) => (
@@ -334,7 +361,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
         <button
           type="button"
           onClick={() => onChange({ showOvertime: !d.showOvertime })}
-          className="text-sm text-green-600 hover:text-green-700 font-medium"
+          className="text-sm text-teal-600 hover:text-teal-700 font-medium"
         >
           {d.showOvertime ? '▼' : '▶'} 残業・欠勤を追加
         </button>
@@ -424,6 +451,84 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
                 </p>
               </div>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* 賞与（今月支給あり） */}
+      <div className="border-t pt-4">
+        <label className="flex items-start cursor-pointer">
+          <input
+            type="checkbox"
+            checked={d.hasBonus}
+            onChange={(e) => onChange({ hasBonus: e.target.checked })}
+            className="mt-1 h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"
+          />
+          <span className="ml-3">
+            <span className="block text-sm font-medium text-gray-700">今月は賞与（ボーナス）あり</span>
+            <span className="block text-xs text-gray-500 mt-1">
+              賞与は給与とは別に計算し、別途「賞与明細」を出力します（都道府県・年齢・扶養などは共通）。
+            </span>
+          </span>
+        </label>
+
+        {d.hasBonus && (
+          <div className="mt-4 space-y-4 pl-4 border-l-2 border-teal-200">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">賞与総支給額</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={d.bonusAmount}
+                    onChange={(e) => onChange({ bonusAmount: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  />
+                  <span className="absolute right-4 top-2.5 text-gray-500">円</span>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">前月の社会保険料控除後の給与額</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={d.prevMonthAfterInsurance}
+                    onChange={(e) => onChange({ prevMonthAfterInsurance: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                  />
+                  <span className="absolute right-4 top-2.5 text-gray-500">円</span>
+                </div>
+                <p className="mt-1 text-xs text-gray-400">賞与の所得税率の基準。前月の給与がない場合は 0 を入力（特例・月額表）</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">当年度の既払標準賞与額 累計</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={d.priorFiscalBonusTotal}
+                    onChange={(e) => onChange({ priorFiscalBonusTotal: e.target.value })}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                    min="0"
+                  />
+                  <span className="absolute right-3 top-2 text-xs text-gray-500">円</span>
+                </div>
+                <p className="mt-1 text-xs text-gray-400">健保573万累計上限の判定用</p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">賞与計算期間の月数</label>
+                <input
+                  type="number"
+                  value={d.bonusCalcMonths}
+                  onChange={(e) => onChange({ bonusCalcMonths: e.target.value })}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                  min="1"
+                  max="12"
+                />
+                <p className="mt-1 text-xs text-gray-400">特例計算時の除数（6超で12）</p>
+              </div>
+            </div>
           </div>
         )}
       </div>

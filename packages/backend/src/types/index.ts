@@ -81,6 +81,43 @@ export interface SalaryCalculationResult {
   ratesUsed: InsuranceRates;
 }
 
+// 賞与（ボーナス）計算の入力。月給とは全く別の計算経路（算出率の表・標準賞与額）
+export interface BonusInput {
+  bonusAmount: number;                 // 賞与総支給額（円）
+  prevMonthAfterInsurance: number;     // 前月の社会保険料等控除後の給与額（円）。0/未入力なら特例（月額表）で計算
+  prefecture: string;
+  salaryMonth: string;                 // YYYY-MM（料率の適用月）
+  age: number;
+  dependents: number;
+  enrollInInsurance: boolean;
+  priorFiscalBonusTotal?: number;      // 当年度(4/1〜3/31)に既に支払った標準賞与額の累計（健保573万上限判定用、既定0）
+  bonusCalcMonths?: number;            // 賞与計算期間の月数（特例時の除数。6を超えると12、既定6）
+}
+
+export interface BonusCalculationResult {
+  bonusAmount: number;
+  standardBonusAmount: number;         // 標準賞与額（1,000円未満切捨て、上限適用前）
+  healthStandardBonus: number;         // 健保・介護・子育て支援金の対象額（年度573万累計上限適用後）
+  pensionStandardBonus: number;        // 厚年の対象額（1回150万上限適用後）
+  deductions: {
+    healthInsurance: number;
+    nursingCare: number;
+    employeePension: number;
+    unemployment: number;
+    childSupport: number;
+    incomeTax: number;
+    total: number;
+  };
+  netBonus: number;
+  taxMethod: string;                   // 例: '算出率 2.042%' / '特例（前月給与なし・月額表÷6×6）'
+  taxRate: number | null;              // 算出率(%)。特例時は null
+  breakdown: {
+    income: Array<{ label: string; amount: number; description?: string }>;
+    deductions: Array<{ label: string; amount: number; calculation: string; sourceUrl?: string }>;
+  };
+  ratesUsed: InsuranceRates;
+}
+
 export interface Prefecture {
   code: string;
   name_ja: string;
