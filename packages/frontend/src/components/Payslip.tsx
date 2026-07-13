@@ -6,6 +6,10 @@ interface Props {
   result: SalaryCalculationResult;
   input: SalaryInput;
   onClose: () => void;
+  // 多人版から従業員名などを事前設定するための任意プロップ（未指定なら従来のデフォルト）
+  defaultCompanyName?: string;
+  defaultEmployeeName?: string;
+  defaultEmployeeNo?: string;
 }
 
 const TEAL = '#4db6ac';
@@ -32,10 +36,17 @@ function fmtHours(h: number): string {
   return `${hh}:${String(mm).padStart(2, '0')}`;
 }
 
-export default function Payslip({ result, input, onClose }: Props) {
-  const [companyName, setCompanyName] = useState('株式会社サンプル');
-  const [employeeName, setEmployeeName] = useState('山田 太郎');
-  const [employeeNo, setEmployeeNo] = useState('');
+export default function Payslip({
+  result,
+  input,
+  onClose,
+  defaultCompanyName,
+  defaultEmployeeName,
+  defaultEmployeeNo,
+}: Props) {
+  const [companyName, setCompanyName] = useState(defaultCompanyName || '株式会社サンプル');
+  const [employeeName, setEmployeeName] = useState(defaultEmployeeName || '山田 太郎');
+  const [employeeNo, setEmployeeNo] = useState(defaultEmployeeNo || '');
 
   // 印刷時に明細以外を隠すためのマーカー
   useEffect(() => {
@@ -53,6 +64,21 @@ export default function Payslip({ result, input, onClose }: Props) {
     : scheduledHours - absenceDays * 8 + ot.regular + ot.holiday + ot.night;
 
   const d = result.deductions;
+
+  // 印刷/PDF保存: ブラウザは document.title を既定ファイル名に使うため、
+  // 「会社名-氏名-YYYY年MM月給与明細」に一時的に差し替え、印刷後に元へ戻す。
+  const handlePrint = () => {
+    const original = document.title;
+    const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, '').trim();
+    const parts = [safe(companyName), safe(employeeName), `${y}年${m}月給与明細`].filter(Boolean);
+    document.title = parts.join('-');
+    const restore = () => {
+      document.title = original;
+      window.removeEventListener('afterprint', restore);
+    };
+    window.addEventListener('afterprint', restore);
+    window.print();
+  };
 
   // セル定義: [ラベル, 値] — 空セルは null
   type Cell = [string, string] | null;
@@ -189,7 +215,7 @@ export default function Payslip({ result, input, onClose }: Props) {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => window.print()}
+              onClick={handlePrint}
               className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700"
             >
               🖨 印刷 / PDF保存

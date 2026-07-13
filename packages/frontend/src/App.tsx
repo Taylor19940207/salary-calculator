@@ -110,7 +110,7 @@ function App() {
             </div>
           </div>
         ) : (
-          <BatchCalculator />
+          <BatchCalculator prefectures={prefectures} />
         )}
 
         <footer className="mt-12 pt-8 border-t text-center text-sm text-gray-600">

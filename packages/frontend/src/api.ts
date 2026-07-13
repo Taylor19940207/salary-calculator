@@ -29,3 +29,24 @@ export async function getInsuranceRates(prefecture: string, date: string) {
   });
   return response.data;
 }
+
+// ===== 批量計算（多人版） =====
+
+export async function calculateBatch(employees: unknown[]) {
+  const response = await api.post('/api/calculate/batch', { employees });
+  return response.data;
+}
+
+export async function importCsvAndCalculate(csvData: string) {
+  const response = await api.post('/api/calculate/import-csv', { csvData });
+  return response.data;
+}
+
+export async function exportResultsCsv(results: unknown[]): Promise<Blob> {
+  const response = await api.post(
+    '/api/calculate/export-csv',
+    { results },
+    { responseType: 'blob' }
+  );
+  return response.data;
+}

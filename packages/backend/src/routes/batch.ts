@@ -205,6 +205,11 @@ router.post('/calculate/import-csv', async (req, res) => {
         }
       });
 
+      // 給与形態が未指定の CSV は月給とみなす（給与台帳の大半が月給のため）
+      if (!employee.salaryType) {
+        employee.salaryType = 'monthly';
+      }
+
       return employee;
     });
 
@@ -217,6 +222,7 @@ router.post('/calculate/import-csv', async (req, res) => {
         return {
           id: employee.id,
           name: employee.name,
+          input: employee as SalaryInput,
           result,
         };
       } catch (error) {
