@@ -105,6 +105,7 @@ const SalaryInputSchema = z.object({
   totalWorkHours: z.number().optional(),
   commutingAllowance: z.number().default(0),
   businessTripAllowance: z.number().min(0).optional(),
+  performancePay: z.number().min(0).optional(),
   otherAllowances: z.number().default(0),
   prefecture: z.string(),
   salaryMonth: z.string().regex(/^\d{4}-\d{2}$/),

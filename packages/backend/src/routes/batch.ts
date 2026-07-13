@@ -16,6 +16,7 @@ const BatchCalculateSchema = z.object({
     totalWorkHours: z.number().optional(),
     commutingAllowance: z.number().default(0),
     businessTripAllowance: z.number().min(0).optional(),
+    performancePay: z.number().min(0).optional(),
     otherAllowances: z.number().default(0),
     prefecture: z.string(),
     salaryMonth: z.string().regex(/^\d{4}-\d{2}$/),
@@ -61,6 +62,7 @@ router.post('/calculate/batch', async (req, res) => {
           totalWorkHours: employee.totalWorkHours,
           commutingAllowance: employee.commutingAllowance,
           businessTripAllowance: employee.businessTripAllowance,
+          performancePay: employee.performancePay,
           otherAllowances: employee.otherAllowances,
           prefecture: employee.prefecture,
           salaryMonth: employee.salaryMonth,
@@ -177,6 +179,10 @@ router.post('/calculate/import-csv', async (req, res) => {
           case 'commutingallowance':
           case '通勤手当':
             employee.commutingAllowance = parseFloat(value) || 0;
+            break;
+          case 'performancepay':
+          case '業績給':
+            employee.performancePay = parseFloat(value) || undefined;
             break;
           case 'otherallowances':
           case 'その他手当':

@@ -10,6 +10,10 @@ interface Props {
   defaultCompanyName?: string;
   defaultEmployeeName?: string;
   defaultEmployeeNo?: string;
+  // 会社共通の支給日・給与計算期間（YYYY-MM-DD、未指定なら期間は前月1日〜末日を既定）
+  defaultPaymentDate?: string;
+  defaultPeriodStart?: string;
+  defaultPeriodEnd?: string;
 }
 
 const TEAL = '#4db6ac';
@@ -20,14 +24,22 @@ function findIncome(result: SalaryCalculationResult, label: string): number {
   return item ? Math.abs(item.amount) : 0;
 }
 
-// 給与計算期間（給与月の前月1日〜末日と仮定）
-function calcPeriod(salaryMonth: string): string {
+// 給与計算期間の既定値（給与月の前月1日〜末日と仮定）を YYYY-MM-DD で返す
+function defaultPeriod(salaryMonth: string): { start: string; end: string } {
   const [y, m] = salaryMonth.split('-').map(Number);
   const prev = new Date(y, m - 2, 1);
   const py = prev.getFullYear();
   const pm = prev.getMonth() + 1;
   const lastDay = new Date(py, pm, 0).getDate();
-  return `${py}年${pm}月1日〜${py}年${pm}月${lastDay}日`;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return { start: `${py}-${pad(pm)}-01`, end: `${py}-${pad(pm)}-${pad(lastDay)}` };
+}
+
+// YYYY-MM-DD → 「YYYY年M月D日」（空文字はそのまま空）
+function fmtJpDate(iso: string): string {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-').map(Number);
+  return `${y}年${m}月${d}日`;
 }
 
 function fmtHours(h: number): string {
@@ -43,10 +55,17 @@ export default function Payslip({
   defaultCompanyName,
   defaultEmployeeName,
   defaultEmployeeNo,
+  defaultPaymentDate,
+  defaultPeriodStart,
+  defaultPeriodEnd,
 }: Props) {
   const [companyName, setCompanyName] = useState(defaultCompanyName || '株式会社サンプル');
   const [employeeName, setEmployeeName] = useState(defaultEmployeeName || '山田 太郎');
   const [employeeNo, setEmployeeNo] = useState(defaultEmployeeNo || '');
+  const period0 = defaultPeriod(input.salaryMonth);
+  const [paymentDate, setPaymentDate] = useState(defaultPaymentDate || '');
+  const [periodStart, setPeriodStart] = useState(defaultPeriodStart || period0.start);
+  const [periodEnd, setPeriodEnd] = useState(defaultPeriodEnd || period0.end);
 
   // 印刷時に明細以外を隠すためのマーカー
   useEffect(() => {
@@ -212,6 +231,31 @@ export default function Payslip({
                 className="ml-1 px-2 py-1 border rounded w-24"
               />
             </label>
+            <label>
+              支給日:
+              <input
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+                className="ml-1 px-2 py-1 border rounded"
+              />
+            </label>
+            <label>
+              計算期間:
+              <input
+                type="date"
+                value={periodStart}
+                onChange={(e) => setPeriodStart(e.target.value)}
+                className="ml-1 px-2 py-1 border rounded"
+              />
+              <span className="mx-1">〜</span>
+              <input
+                type="date"
+                value={periodEnd}
+                onChange={(e) => setPeriodEnd(e.target.value)}
+                className="px-2 py-1 border rounded"
+              />
+            </label>
           </div>
           <div className="flex gap-2">
             <button
@@ -235,7 +279,10 @@ export default function Payslip({
             {y}年{m}月分　給与支払明細書
           </h1>
 
-          <p className="text-sm mb-1">給与計算期間: {calcPeriod(input.salaryMonth)}</p>
+          <div className="flex justify-between items-start mb-1">
+            <p className="text-sm">給与計算期間: {fmtJpDate(periodStart)}〜{fmtJpDate(periodEnd)}</p>
+            {paymentDate && <p className="text-sm">支給日: {fmtJpDate(paymentDate)}</p>}
+          </div>
           <p className="text-base font-bold mb-1">{companyName}</p>
           <div className="flex justify-between items-end mb-4">
             <p className="text-sm">

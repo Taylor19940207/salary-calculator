@@ -20,6 +20,7 @@ export interface SalaryInput {
   totalWorkHours?: number;
   commutingAllowance: number;
   businessTripAllowance?: number; // 出張手当（非課税・社保基数にも不算入）
+  performancePay?: number;        // 業績給（毎月支給・課税・社保基数に算入。その他手当と同じ扱い）
   otherAllowances: number;
   prefecture: string;
   salaryMonth: string;

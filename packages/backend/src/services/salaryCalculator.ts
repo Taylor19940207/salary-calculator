@@ -144,13 +144,22 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
 
   // 手当追加
   const businessTripAllowance = input.businessTripAllowance || 0;
-  grossSalary += input.commutingAllowance + input.otherAllowances;
+  const performancePay = input.performancePay || 0;
+  grossSalary += input.commutingAllowance + performancePay + input.otherAllowances;
 
   if (input.commutingAllowance > 0) {
     breakdown.income.push({
       label: '通勤手当（非課税）',
       amount: input.commutingAllowance,
       description: '所得税非課税・社会保険の報酬には算入',
+    });
+  }
+
+  if (performancePay > 0) {
+    breakdown.income.push({
+      label: '業績給',
+      amount: performancePay,
+      description: '課税・社会保険および雇用保険の基数に算入（その他手当と同じ扱い）',
     });
   }
 

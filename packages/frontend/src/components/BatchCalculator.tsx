@@ -46,6 +46,9 @@ export default function BatchCalculator({ prefectures }: Props) {
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
   const [payslipFor, setPayslipFor] = useState<BatchRow | null>(null);
   const [companyName, setCompanyName] = useState(''); // 全明細に共通の会社名
+  const [paymentDate, setPaymentDate] = useState(''); // 全明細に共通の支給日
+  const [periodStart, setPeriodStart] = useState(''); // 全明細に共通の給与計算期間（開始）
+  const [periodEnd, setPeriodEnd] = useState('');     // 全明細に共通の給与計算期間（終了）
 
   useEffect(() => {
     getGrades().then(setGrades).catch(() => setGrades([]));
@@ -189,19 +192,49 @@ export default function BatchCalculator({ prefectures }: Props) {
     <div className="space-y-6">
       <h2 className="text-xl font-semibold">複数人の給与計算</h2>
 
-      {/* 会社名（全従業員の明細に共通・ここで一度だけ入力） */}
-      <div className="flex items-center gap-3 bg-white rounded-lg shadow-sm p-4">
-        <label htmlFor="batch-company" className="text-sm font-medium text-gray-700 whitespace-nowrap">
-          会社名
-        </label>
-        <input
-          id="batch-company"
-          value={companyName}
-          onChange={(e) => setCompanyName(e.target.value)}
-          placeholder="株式会社サンプル"
-          className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-        />
-        <span className="text-xs text-gray-400 whitespace-nowrap">全員の給与明細に共通で表示されます</span>
+      {/* 会社名・支給日・給与計算期間（全従業員の明細に共通・ここで一度だけ入力） */}
+      <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <label htmlFor="batch-company" className="text-sm font-medium text-gray-700 whitespace-nowrap w-24">
+            会社名
+          </label>
+          <input
+            id="batch-company"
+            value={companyName}
+            onChange={(e) => setCompanyName(e.target.value)}
+            placeholder="株式会社サンプル"
+            className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          <label htmlFor="batch-payday" className="text-sm font-medium text-gray-700 whitespace-nowrap w-24">
+            支給日
+          </label>
+          <input
+            id="batch-payday"
+            type="date"
+            value={paymentDate}
+            onChange={(e) => setPaymentDate(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+          <label className="text-sm font-medium text-gray-700 whitespace-nowrap ml-2">
+            給与計算期間
+          </label>
+          <input
+            type="date"
+            value={periodStart}
+            onChange={(e) => setPeriodStart(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+          <span>〜</span>
+          <input
+            type="date"
+            value={periodEnd}
+            onChange={(e) => setPeriodEnd(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+        <p className="text-xs text-gray-400">会社名・支給日・給与計算期間は全員の給与明細に共通で表示されます（期間は空欄なら給与月の前月1日〜末日）</p>
       </div>
 
       {error && (
@@ -434,6 +467,9 @@ export default function BatchCalculator({ prefectures }: Props) {
           defaultCompanyName={companyName || undefined}
           defaultEmployeeName={payslipFor.name || ''}
           defaultEmployeeNo={payslipFor.id || ''}
+          defaultPaymentDate={paymentDate || undefined}
+          defaultPeriodStart={periodStart || undefined}
+          defaultPeriodEnd={periodEnd || undefined}
         />
       )}
     </div>
