@@ -215,10 +215,11 @@ export default function Payslip({
   return createPortal(
     <div className="payslip-overlay fixed inset-0 bg-black/50 z-50 overflow-y-auto">
       <div className="max-w-4xl mx-auto my-8 bg-white rounded-lg shadow-xl print:shadow-none print:my-0 print:rounded-none">
-        {/* ツールバー（印刷時非表示） */}
-        <div className="flex justify-between items-center px-6 py-4 border-b print:hidden">
-          <div className="flex gap-4 items-center text-sm flex-wrap">
-            <label>
+        {/* ツールバー（印刷時非表示）: 上段=編集欄（折り返し可）、下段=ボタン。
+            同一行に詰めると賞与支給日まで入ったときにボタンが潰れるため分離 */}
+        <div className="px-6 py-4 border-b print:hidden space-y-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
+            <label className="whitespace-nowrap">
               会社名:
               <input
                 value={companyName}
@@ -226,7 +227,7 @@ export default function Payslip({
                 className="ml-1 px-2 py-1 border rounded w-44"
               />
             </label>
-            <label>
+            <label className="whitespace-nowrap">
               氏名:
               <input
                 value={employeeName}
@@ -234,7 +235,7 @@ export default function Payslip({
                 className="ml-1 px-2 py-1 border rounded w-32"
               />
             </label>
-            <label>
+            <label className="whitespace-nowrap">
               社員番号:
               <input
                 value={employeeNo}
@@ -242,7 +243,7 @@ export default function Payslip({
                 className="ml-1 px-2 py-1 border rounded w-24"
               />
             </label>
-            <label>
+            <label className="whitespace-nowrap">
               支給日:
               <input
                 type="date"
@@ -251,7 +252,7 @@ export default function Payslip({
                 className="ml-1 px-2 py-1 border rounded"
               />
             </label>
-            <label>
+            <label className="whitespace-nowrap">
               計算期間:
               <input
                 type="date"
@@ -268,7 +269,7 @@ export default function Payslip({
               />
             </label>
             {hasBonus && (
-              <label>
+              <label className="whitespace-nowrap">
                 賞与支給日:
                 <input
                   type="date"
@@ -279,18 +280,18 @@ export default function Payslip({
               </label>
             )}
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handlePrint}
-              className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700"
-            >
-              🖨 {hasBonus ? '給与＋賞与を印刷 / PDF保存' : '印刷 / PDF保存'}
-            </button>
+          <div className="flex justify-end gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300"
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 whitespace-nowrap"
             >
               閉じる
+            </button>
+            <button
+              onClick={handlePrint}
+              className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm font-medium hover:bg-teal-700 whitespace-nowrap"
+            >
+              🖨 {hasBonus ? '給与＋賞与を印刷 / PDF保存' : '印刷 / PDF保存'}
             </button>
           </div>
         </div>
