@@ -62,3 +62,9 @@ export async function exportResultsCsv(results: unknown[]): Promise<Blob> {
   );
   return response.data;
 }
+
+// 給与/賞与明細書を PDF と同じテンプレートで Excel 出力する
+export async function exportPayslipXlsx(payload: unknown): Promise<Blob> {
+  const response = await api.post('/api/payslip-xlsx', payload, { responseType: 'blob' });
+  return response.data;
+}

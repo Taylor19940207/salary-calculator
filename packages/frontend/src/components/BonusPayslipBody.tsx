@@ -23,6 +23,38 @@ function fmtJpDate(iso: string): string {
 
 type Cell = [string, string] | null;
 
+// 賞与明細の支給/控除行を構築する。画面（本コンポーネント）と Excel 出力（Payslip.tsx）で
+// 同じ行データを使い、レイアウトの分岐を防ぐ
+export function buildBonusRows(
+  result: BonusCalculationResult,
+  merged: ReturnType<typeof mergedBonusDeductions>
+): { shikyuRows: Cell[][]; kojoRows: Cell[][] } {
+  const fmt = formatYen;
+  const shikyuRows: Cell[][] = [
+    [
+      ['賞与', result.bonusAmount.toLocaleString()],
+      ['標準賞与額', result.standardBonusAmount.toLocaleString()],
+      null,
+      null,
+    ],
+  ];
+  const kojoRows: Cell[][] = [
+    [
+      ['健康保険', fmt(merged.healthInsurance)],
+      ['介護保険', fmt(merged.nursingCare)],
+      ['厚生年金', fmt(merged.employeePension)],
+      ['雇用保険', fmt(merged.unemployment)],
+    ],
+    [
+      ['子育て支援金', fmt(merged.childSupport)],
+      ['所得税', fmt(merged.incomeTax)],
+      null,
+      null,
+    ],
+  ];
+  return { shikyuRows, kojoRows };
+}
+
 // 賞与支払明細書の本体（勤怠欄なし）。印刷ページの 1 枚分。
 export default function BonusPayslipBody({
   result,
@@ -39,28 +71,7 @@ export default function BonusPayslipBody({
   const netAmount = d.netBonus;
   const fmt = formatYen;
 
-  const shikyuRows: Cell[][] = [
-    [
-      ['賞与', result.bonusAmount.toLocaleString()],
-      ['標準賞与額', result.standardBonusAmount.toLocaleString()],
-      null,
-      null,
-    ],
-  ];
-  const kojoRows: Cell[][] = [
-    [
-      ['健康保険', fmt(d.healthInsurance)],
-      ['介護保険', fmt(d.nursingCare)],
-      ['厚生年金', fmt(d.employeePension)],
-      ['雇用保険', fmt(d.unemployment)],
-    ],
-    [
-      ['子育て支援金', fmt(d.childSupport)],
-      ['所得税', fmt(d.incomeTax)],
-      null,
-      null,
-    ],
-  ];
+  const { shikyuRows, kojoRows } = buildBonusRows(result, d);
 
   const renderSection = (title: string, rows: Cell[][], cols: number) => (
     <table className="w-full border-collapse mb-3" style={{ tableLayout: 'fixed' }}>

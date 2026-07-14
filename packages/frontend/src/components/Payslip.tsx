@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { SalaryInput, SalaryCalculationResult, BonusInput, BonusCalculationResult } from '../types';
-import BonusPayslipBody from './BonusPayslipBody';
-import { formatYen, mergedSalaryDeductions, type DeductionOverrides } from '../format';
+import BonusPayslipBody, { buildBonusRows } from './BonusPayslipBody';
+import { formatYen, mergedSalaryDeductions, mergedBonusDeductions, type DeductionOverrides } from '../format';
+import { exportPayslipXlsx } from '../api';
 
 interface Props {
   result: SalaryCalculationResult;
@@ -179,6 +180,86 @@ export default function Payslip({
     ],
   ];
 
+  // Excel出力: 画面/PDFと同じ行データ・同じ値（端数の手動調整込み）で、
+  // 同じ青緑テンプレートの .xlsx を生成する（顧客がExcel上で微調整できる形）
+  const [exporting, setExporting] = useState(false);
+  const handleExcel = async () => {
+    setExporting(true);
+    try {
+      const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, '').trim();
+      const docType = hasBonus ? `${y}年${m}月給与・賞与明細` : `${y}年${m}月給与明細`;
+      const fileName = [safe(companyName), safe(employeeName), docType].filter(Boolean).join('-');
+
+      const sheets: unknown[] = [
+        {
+          name: '給与明細',
+          title: `${y}年${m}月分　給与支払明細書`,
+          companyName,
+          employeeLine: `氏名: ${employeeName}${employeeNo ? `（社員番号: ${employeeNo}）` : ''}`,
+          periodLine: `給与計算期間: ${fmtJpDate(periodStart)}〜${fmtJpDate(periodEnd)}`,
+          paymentLine: paymentDate ? `支給日: ${fmtJpDate(paymentDate)}` : undefined,
+          netLabel: '差引支給額',
+          netValue: `¥${fmt(netAmount)}`,
+          sections: [
+            { title: '勤怠', rows: kintaiRows },
+            { title: '支給', rows: shikyuRows },
+            { title: '控除', rows: kojoRows },
+          ],
+          totals: {
+            grossLabel: '総支給額',
+            gross: result.grossSalary.toLocaleString(),
+            deductionLabel: '総控除額',
+            deduction: fmt(d.total),
+            netLabel: '差引支給額',
+            net: fmt(netAmount),
+          },
+          note: '※ 本明細は計算ツールによる参考値です。',
+        },
+      ];
+
+      if (hasBonus) {
+        const bm = mergedBonusDeductions(bonusResult!, bonusOverrides);
+        const bonusRows = buildBonusRows(bonusResult!, bm);
+        const [by, bmn] = bonusInput!.salaryMonth.split('-').map(Number);
+        sheets.push({
+          name: '賞与明細',
+          title: `${by}年${bmn}月分　賞与支払明細書`,
+          companyName,
+          employeeLine: `氏名: ${employeeName}${employeeNo ? `（社員番号: ${employeeNo}）` : ''}`,
+          paymentLine: bonusPaymentDate ? `賞与支給日: ${fmtJpDate(bonusPaymentDate)}` : undefined,
+          netLabel: '差引支給額',
+          netValue: `¥${fmt(bm.netBonus)}`,
+          sections: [
+            { title: '支給', rows: bonusRows.shikyuRows },
+            { title: '控除', rows: bonusRows.kojoRows },
+          ],
+          totals: {
+            grossLabel: '総支給額',
+            gross: bonusResult!.bonusAmount.toLocaleString(),
+            deductionLabel: '総控除額',
+            deduction: fmt(bm.total),
+            netLabel: '差引支給額',
+            net: fmt(bm.netBonus),
+          },
+          note: '※ 住民税は賞与から徴収されません。本明細は計算ツールによる参考値です。',
+        });
+      }
+
+      const blob = await exportPayslipXlsx({ fileName, sheets });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${fileName}.xlsx`;
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error('Excel export failed:', e);
+      alert('Excel 出力に失敗しました');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const renderSection = (title: string, rows: Cell[][]) => (
     <table className="w-full border-collapse mb-3" style={{ tableLayout: 'fixed' }}>
       <tbody>
@@ -295,6 +376,13 @@ export default function Payslip({
               className="px-4 py-2 text-sm font-semibold bg-white border border-gray-300 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 active:bg-gray-100 transition-colors whitespace-nowrap"
             >
               閉じる
+            </button>
+            <button
+              onClick={handleExcel}
+              disabled={exporting}
+              className="px-4 py-2 text-sm font-semibold bg-white border border-teal-600 text-teal-700 rounded-lg shadow-sm hover:bg-teal-50 active:bg-teal-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+            >
+              {exporting ? '出力中...' : 'Excel出力'}
             </button>
             <button
               onClick={handlePrint}

@@ -11,6 +11,7 @@ import { calculateBonus } from './services/bonusCalculator.js';
 import { getPrefectures, getInsuranceRates, getGrades } from './db/queries.js';
 import { ensureDatabase } from './db/setup.js';
 import batchRoutes from './routes/batch.js';
+import payslipXlsxRoutes from './routes/payslipXlsx.js';
 
 dotenv.config();
 
@@ -180,6 +181,7 @@ app.post('/api/calculate-bonus', async (req, res) => {
 
 // 批量計算路由
 app.use('/api', batchRoutes);
+app.use('/api', payslipXlsxRoutes);
 
 // 本番環境: フロントエンドのビルド成果物を配信
 const frontendDist = join(__dirname, '../../frontend/dist');
