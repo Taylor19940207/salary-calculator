@@ -1,7 +1,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { SalaryInput, SalaryCalculationResult, BonusInput, BonusCalculationResult } from '../types';
-import BonusPayslipBody, { buildBonusRows } from './BonusPayslipBody';
+import BonusPayslipBody from './BonusPayslipBody';
 import { formatYen, mergedSalaryDeductions, mergedBonusDeductions, type DeductionOverrides } from '../format';
 import { exportPayslipXlsx } from '../api';
 
@@ -122,6 +122,15 @@ export default function Payslip({
 
   // セル定義: [ラベル, 値] — 空セルは null
   type Cell = [string, string] | null;
+  type XlsxCell = {
+    label: string;
+    value: string | number;
+    includeInTotal?: boolean;
+  } | null;
+
+  function toXlsxTextRows(rows: Cell[][]): XlsxCell[][] {
+    return rows.map((row) => row.map((cell) => cell ? { label: cell[0], value: cell[1] } : null));
+  }
   const kintaiRows: Cell[][] = [
     [
       ['所定就労日', `${scheduledDays}`],
@@ -190,6 +199,47 @@ export default function Payslip({
       const docType = hasBonus ? `${y}年${m}月給与・賞与明細` : `${y}年${m}月給与明細`;
       const fileName = [safe(companyName), safe(employeeName), docType].filter(Boolean).join('-');
 
+      // Excelは静的な表示文字列ではなく数値を保持し、合計式が編集に追従する。
+      // includeInTotal=false/省略のセル（標準賞与額・勤怠など）は合計に含めない。
+      const salaryIncomeRows: XlsxCell[][] = [
+        [
+          { label: '基本給', value: findIncome(result, '基本給'), includeInTotal: true },
+          { label: '残業手当', value: findIncome(result, '残業手当'), includeInTotal: true },
+          { label: '休日手当', value: findIncome(result, '休日労働手当'), includeInTotal: true },
+          { label: '夜勤手当', value: findIncome(result, '深夜労働手当'), includeInTotal: true },
+          absenceDeduction > 0
+            ? { label: '欠勤控除', value: -absenceDeduction, includeInTotal: true }
+            : null,
+          null,
+        ],
+        [
+          { label: '通勤手当（非課税）', value: input.commutingAllowance || 0, includeInTotal: true },
+          { label: '出張手当（非課税）', value: input.businessTripAllowance || 0, includeInTotal: true },
+          { label: 'その他手当', value: input.otherAllowances || 0, includeInTotal: true },
+          { label: '業績給', value: input.performancePay || 0, includeInTotal: true },
+          null,
+          null,
+        ],
+      ];
+      const salaryDeductionRows: XlsxCell[][] = [
+        [
+          { label: '雇用保険', value: d.unemployment, includeInTotal: true },
+          { label: '健康保険', value: d.healthInsurance, includeInTotal: true },
+          { label: '介護保険', value: d.nursingCare, includeInTotal: true },
+          { label: '厚生年金', value: d.employeePension, includeInTotal: true },
+          { label: '子育て支援金', value: d.childSupport, includeInTotal: true },
+          { label: '所得税', value: d.incomeTax, includeInTotal: true },
+        ],
+        [
+          { label: '住民税', value: d.residentTax || 0, includeInTotal: true },
+          null,
+          null,
+          null,
+          null,
+          null,
+        ],
+      ];
+
       const sheets: unknown[] = [
         {
           name: '給与明細',
@@ -199,19 +249,19 @@ export default function Payslip({
           periodLine: `給与計算期間: ${fmtJpDate(periodStart)}〜${fmtJpDate(periodEnd)}`,
           paymentLine: paymentDate ? `支給日: ${fmtJpDate(paymentDate)}` : undefined,
           netLabel: '差引支給額',
-          netValue: `¥${fmt(netAmount)}`,
+          netValue: netAmount,
           sections: [
-            { title: '勤怠', rows: kintaiRows },
-            { title: '支給', rows: shikyuRows },
-            { title: '控除', rows: kojoRows },
+            { title: '勤怠', rows: toXlsxTextRows(kintaiRows) },
+            { title: '支給', rows: salaryIncomeRows },
+            { title: '控除', rows: salaryDeductionRows },
           ],
           totals: {
             grossLabel: '総支給額',
-            gross: result.grossSalary.toLocaleString(),
+            gross: result.grossSalary,
             deductionLabel: '総控除額',
-            deduction: fmt(d.total),
+            deduction: d.total,
             netLabel: '差引支給額',
-            net: fmt(netAmount),
+            net: netAmount,
           },
           note: '※ 本明細は計算ツールによる参考値です。',
         },
@@ -219,8 +269,27 @@ export default function Payslip({
 
       if (hasBonus) {
         const bm = mergedBonusDeductions(bonusResult!, bonusOverrides);
-        const bonusRows = buildBonusRows(bonusResult!, bm);
         const [by, bmn] = bonusInput!.salaryMonth.split('-').map(Number);
+        const bonusIncomeRows: XlsxCell[][] = [[
+          { label: '賞与', value: bonusResult!.bonusAmount, includeInTotal: true },
+          { label: '標準賞与額', value: bonusResult!.standardBonusAmount },
+          null,
+          null,
+        ]];
+        const bonusDeductionRows: XlsxCell[][] = [
+          [
+            { label: '健康保険', value: bm.healthInsurance, includeInTotal: true },
+            { label: '介護保険', value: bm.nursingCare, includeInTotal: true },
+            { label: '厚生年金', value: bm.employeePension, includeInTotal: true },
+            { label: '雇用保険', value: bm.unemployment, includeInTotal: true },
+          ],
+          [
+            { label: '子育て支援金', value: bm.childSupport, includeInTotal: true },
+            { label: '所得税', value: bm.incomeTax, includeInTotal: true },
+            null,
+            null,
+          ],
+        ];
         sheets.push({
           name: '賞与明細',
           title: `${by}年${bmn}月分　賞与支払明細書`,
@@ -228,18 +297,18 @@ export default function Payslip({
           employeeLine: `氏名: ${employeeName}${employeeNo ? `（社員番号: ${employeeNo}）` : ''}`,
           paymentLine: bonusPaymentDate ? `賞与支給日: ${fmtJpDate(bonusPaymentDate)}` : undefined,
           netLabel: '差引支給額',
-          netValue: `¥${fmt(bm.netBonus)}`,
+          netValue: bm.netBonus,
           sections: [
-            { title: '支給', rows: bonusRows.shikyuRows },
-            { title: '控除', rows: bonusRows.kojoRows },
+            { title: '支給', rows: bonusIncomeRows },
+            { title: '控除', rows: bonusDeductionRows },
           ],
           totals: {
             grossLabel: '総支給額',
-            gross: bonusResult!.bonusAmount.toLocaleString(),
+            gross: bonusResult!.bonusAmount,
             deductionLabel: '総控除額',
-            deduction: fmt(bm.total),
+            deduction: bm.total,
             netLabel: '差引支給額',
-            net: fmt(bm.netBonus),
+            net: bm.netBonus,
           },
           note: '※ 住民税は賞与から徴収されません。本明細は計算ツールによる参考値です。',
         });

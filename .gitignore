@@ -12,3 +12,5 @@ packages/backend/data/
 
 # ローカル検証用の一時ファイル（明細PDFのレンダリング確認など）
 tmp/
+output/
+outputs/
