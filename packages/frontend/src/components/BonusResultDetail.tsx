@@ -94,7 +94,9 @@ export default function BonusResultDetail({ result, overrides, onChangeOverrides
               );
             })}
             <p className="text-xs text-gray-500 pt-1 border-t border-teal-100">
-              健康保険・介護保険・子育て支援金は原生値（小数あり）を表示。金額を直接編集でき、合計・PDF・CSVに反映されます。
+              端数（小数）がある項目は
+              <span className="px-1 bg-amber-50 border border-amber-300 rounded">淡黄色</span>
+              で表示され、金額を直接編集できます（整数に調整すると色が消え、合計・PDF・CSVに反映）。
             </p>
           </div>
         </div>

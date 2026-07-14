@@ -15,6 +15,7 @@ import {
   formatYen,
   mergedSalaryDeductions,
   mergedBonusDeductions,
+  hasFraction,
   type DeductionOverrides,
 } from '../format';
 
@@ -58,7 +59,8 @@ export default function BatchCalculator({ prefectures }: Props) {
   const [csvInput, setCsvInput] = useState('');
   const [showCsv, setShowCsv] = useState(false);
   const [grades, setGrades] = useState<GradeInfo[]>([]);
-  const [expandedRow, setExpandedRow] = useState<number | null>(null);
+  // 展開中の行（複数可）。端数（小数）が残っている行は計算直後に自動で展開する
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   // 出力する明細（賞与ありなら給与＋賞与を1ファイル2ページで出す）。
   // index は給与側の手動調整（salaryOvByRow）を引くための結果行番号
   const [payslipFor, setPayslipFor] = useState<{
@@ -260,7 +262,19 @@ export default function BatchCalculator({ prefectures }: Props) {
       });
       setBonusById(map);
       setResult(data);
-      setExpandedRow(null);
+      // 端数（小数）が残っている行は自動で展開する（1行ずつ開かなくても調整箇所がすぐ見える）
+      const autoExpand = new Set<number>();
+      data.results.forEach((r: BatchRow, i: number) => {
+        if (r.error) return;
+        const bonusCell = map[(r.id ?? '').trim()];
+        if (
+          hasFraction(r.result.deductionsRaw) ||
+          (bonusCell?.result && hasFraction(bonusCell.result.deductionsRaw))
+        ) {
+          autoExpand.add(i);
+        }
+      });
+      setExpandedRows(autoExpand);
       // 再計算したら手動調整はリセット
       setSalaryOvByRow({});
       setBonusOvById({});
@@ -283,7 +297,11 @@ export default function BatchCalculator({ prefectures }: Props) {
       const data = await importCsvAndCalculate(csvInput);
       setBonusById({}); // CSV 経由は賞与非対応
       setResult(data);
-      setExpandedRow(null);
+      const autoExpand = new Set<number>();
+      data.results.forEach((r: BatchRow, i: number) => {
+        if (!r.error && hasFraction(r.result.deductionsRaw)) autoExpand.add(i);
+      });
+      setExpandedRows(autoExpand);
       setSalaryOvByRow({});
       setBonusOvById({});
     } catch (err) {
@@ -576,9 +594,10 @@ export default function BatchCalculator({ prefectures }: Props) {
             <div className="p-4 bg-gray-50 border-b">
               <h3 className="font-semibold">明細一覧</h3>
             </div>
-            <div className="overflow-x-auto max-h-[32rem] overflow-y-auto">
+            {/* 高さ制限なし: 展開行が多くてもページごと伸びる（内部スクロールに詰め込まない） */}
+            <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-100 sticky top-0">
+                <thead className="bg-gray-100">
                   <tr>
                     <th className="px-3 py-2 text-left">明細</th>
                     <th className="px-4 py-2 text-left w-8"></th>
@@ -591,16 +610,31 @@ export default function BatchCalculator({ prefectures }: Props) {
                 <tbody>
                   {result.results.map((r, index) => {
                     const expandable = !r.error;
-                    const isOpen = expandedRow === index;
+                    const isOpen = expandedRows.has(index);
                     // 従業員コードで賞与を引く（行順序に依存しない）
                     const bonus = (r.id && bonusById[r.id.trim()]) || null;
                     const bonusKey = r.id?.trim() ?? '';
                     // 手動調整を反映した控除合計・手取（画面・PDF・CSVで同じ値）
                     const rowMerged = r.error ? null : mergedSalaryDeductions(r.result, salaryOvByRow[index] ?? {});
+                    // 端数（小数）が未処理の行（給与・賞与どちらか）。調整が済むとバッジが消える
+                    const bonusMerged = bonus?.result
+                      ? mergedBonusDeductions(bonus.result, bonusOvById[bonusKey] ?? {})
+                      : null;
+                    const pending =
+                      (rowMerged !== null && hasFraction(rowMerged)) ||
+                      (bonusMerged !== null && hasFraction(bonusMerged));
                     return (
                       <Fragment key={index}>
                         <tr
-                          onClick={() => expandable && setExpandedRow(isOpen ? null : index)}
+                          onClick={() =>
+                            expandable &&
+                            setExpandedRows((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(index)) next.delete(index);
+                              else next.add(index);
+                              return next;
+                            })
+                          }
                           className={`border-b ${expandable ? 'hover:bg-teal-50 cursor-pointer' : ''} ${
                             isOpen ? 'bg-teal-50' : ''
                           }`}
@@ -641,6 +675,11 @@ export default function BatchCalculator({ prefectures }: Props) {
                               {bonus?.error && (
                                 <span className="ml-2 px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-xs font-medium">
                                   賞与計算失敗
+                                </span>
+                              )}
+                              {pending && (
+                                <span className="ml-2 px-1.5 py-0.5 bg-amber-50 border border-amber-300 text-amber-700 rounded text-xs font-medium">
+                                  端数あり
                                 </span>
                               )}
                             </div>

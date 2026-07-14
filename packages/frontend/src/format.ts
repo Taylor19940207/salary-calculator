@@ -33,6 +33,19 @@ export const LABEL_TO_FIELD: Record<string, EditableDeductionField> = {
 // 入力欄は文字列で保持し（編集途中の状態を許容）、計算時に数値へ解決する
 export type DeductionOverrides = Partial<Record<EditableDeductionField, string>>;
 
+// 健保・介護・子育てのいずれかに端数（小数）が残っているか（要調整の判定に使う）
+export function hasFraction(d: {
+  healthInsurance: number;
+  nursingCare: number;
+  childSupport: number;
+}): boolean {
+  return (
+    !Number.isInteger(d.healthInsurance) ||
+    !Number.isInteger(d.nursingCare) ||
+    !Number.isInteger(d.childSupport)
+  );
+}
+
 function resolve(override: string | undefined, fallback: number): number {
   if (override === undefined || override.trim() === '') return fallback;
   const n = Number(override);
