@@ -19,8 +19,8 @@ function App() {
   const [lastInput, setLastInput] = useState<SalaryInput | null>(null);
   const [bonusResult, setBonusResult] = useState<BonusCalculationResult | null>(null);
   const [bonusInput, setBonusInput] = useState<BonusInput | null>(null);
-  // 健保・介護・子育て支援金の表示金額の手動調整（表の原生小数値が既定。
-  // 各社の労使特約に合わせて顧客が上書きし、画面・PDF・CSVすべてに反映される）
+  // 健保・介護・子育て支援金の表示金額の手動調整（表の丸め前の小数値が既定。
+  // 各社の労使特約に合わせて利用会社が上書きし、画面・PDF・CSVすべてに反映される）
   const [salaryOverrides, setSalaryOverrides] = useState<DeductionOverrides>({});
   const [bonusOverrides, setBonusOverrides] = useState<DeductionOverrides>({});
   const [loading, setLoading] = useState(false);

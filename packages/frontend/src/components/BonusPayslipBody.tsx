@@ -9,7 +9,7 @@ interface Props {
   employeeName: string;
   employeeNo: string;
   paymentDate: string; // 賞与支給日（YYYY-MM-DD）
-  overrides?: DeductionOverrides; // 健保・介護・子育ての手動調整（表の原生小数値が既定）
+  overrides?: DeductionOverrides; // 健保・介護・子育ての手動調整（表の丸め前の小数値が既定）
 }
 
 const TEAL = '#4db6ac';

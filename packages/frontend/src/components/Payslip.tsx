@@ -8,7 +8,7 @@ interface Props {
   result: SalaryCalculationResult;
   input: SalaryInput;
   onClose: () => void;
-  // 多人版から従業員名などを事前設定するための任意プロップ（未指定なら従来のデフォルト）
+  // 複数人版から従業員名などを事前設定するための任意プロップ（未指定なら従来のデフォルト）
   defaultCompanyName?: string;
   defaultEmployeeName?: string;
   defaultEmployeeNo?: string;
@@ -20,7 +20,7 @@ interface Props {
   bonusResult?: BonusCalculationResult;
   bonusInput?: BonusInput;
   defaultBonusPaymentDate?: string;
-  // 健保・介護・子育て支援金の手動調整（表の原生小数値が既定。画面と同じ値を印刷する）
+  // 健保・介護・子育て支援金の手動調整（表の丸め前の小数値が既定。画面と同じ値を印刷する）
   overrides?: DeductionOverrides;
   bonusOverrides?: DeductionOverrides;
 }

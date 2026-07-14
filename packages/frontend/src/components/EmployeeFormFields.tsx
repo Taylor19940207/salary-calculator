@@ -1,6 +1,6 @@
 import type { Prefecture, GradeInfo, SalaryInput, BonusInput } from '../types';
 
-// 多人版で 1 名分の入力を保持するドラフト。数値は文字列で保持し、
+// 複数人版で 1 名分の入力を保持するドラフト。数値は文字列で保持し、
 // 計算時に draftToInput() で SalaryInput に変換する（単人版 SalaryForm と同じ流儀）。
 export interface EmployeeDraft {
   id: string;

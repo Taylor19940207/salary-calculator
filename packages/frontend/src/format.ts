@@ -12,8 +12,8 @@ export function formatYen(amount: number): string {
 }
 
 // 明細上で金額を手動調整できる控除項目。
-// 健保・介護・子育て支援金は協会けんぽ料額表（または同構造の料率計算）で原生の小数が出るため、
-// 表の値をそのまま表示し、各社の労使特約（切捨て・四捨五入等）に合わせて顧客が手で調整する。
+// 健保・介護・子育て支援金は協会けんぽ料額表（または同構造の料率計算）で丸め前の小数が出るため、
+// 表の値をそのまま表示し、各社の労使特約（切捨て・四捨五入等）に合わせて利用会社が手で調整する。
 // 厚生年金（月給は等級×9.15%で必ず整数）・雇用保険（50銭ルールで徴収額確定）・
 // 所得税・住民税は固定（編集不可）。
 export type EditableDeductionField = 'healthInsurance' | 'nursingCare' | 'childSupport';
@@ -53,7 +53,7 @@ function resolve(override: string | undefined, fallback: number): number {
 }
 
 // 給与: 手動調整を反映した控除額・合計・手取を返す。
-// 健保・介護・子育ては表の原生値（deductionsRaw）を既定とし、上書きがあればそれを使う。
+// 健保・介護・子育ては表の丸め前の金額（deductionsRaw）を既定とし、上書きがあればそれを使う。
 // 所得税は法定丸め後の社保額から算出した値のまま（表示調整の影響を受けない・税法上の要件）。
 export function mergedSalaryDeductions(result: SalaryCalculationResult, ov: DeductionOverrides) {
   const d = result.deductions;

@@ -10,7 +10,7 @@ interface Props {
   // 賞与あり: 明細出力を給与＋賞与の2ページ1ファイルにする
   bonusResult?: BonusCalculationResult | null;
   bonusInput?: BonusInput | null;
-  // 健保・介護・子育て支援金の金額の手動調整（表の原生小数値が既定）
+  // 健保・介護・子育て支援金の金額の手動調整（表の丸め前の小数値が既定）
   overrides: DeductionOverrides;
   onChangeOverrides: (ov: DeductionOverrides) => void;
   bonusOverrides: DeductionOverrides;
@@ -112,7 +112,7 @@ export default function SalaryResult({
           </h3>
           <div className="space-y-3">
             {result.breakdown.deductions.map((item, index) => {
-              // 健保・介護・子育ては表の原生値（小数）を表示し、手動調整できる
+              // 健保・介護・子育ては表の丸め前の金額（小数）を表示し、手動調整できる
               const field = LABEL_TO_FIELD[item.label];
               return (
               <div key={index} className="space-y-1">
@@ -147,8 +147,8 @@ export default function SalaryResult({
               );
             })}
             <p className="text-xs text-gray-500 pt-1 border-t border-gray-100">
-              健康保険・介護保険・子育て支援金は保険料額表の原生値を表示。端数（小数）がある項目は
-              <span className="px-1 bg-amber-50 border border-amber-300 rounded">淡黄色</span>
+              健康保険・介護保険・子育て支援金は保険料額表の丸め前の金額を表示。端数（小数）がある項目は
+              <span className="px-1 bg-amber-50 border border-amber-300 rounded">薄い黄色</span>
               で表示され、各社の端数処理に合わせて金額を直接編集できます（整数に調整すると色が消え、合計・PDF・CSVに反映）。
             </p>
           </div>
@@ -159,7 +159,7 @@ export default function SalaryResult({
         {/* メタ情報 */}
         <div className="bg-blue-50 rounded-lg p-4 space-y-2 text-xs">
           <p className="font-medium text-blue-900">
-            ※ 本計算は {result.ratesUsed.effectiveDate} 版費率を使用
+            ※ 本計算は {result.ratesUsed.effectiveDate} 版の料率を使用
           </p>
           <div className="text-blue-700 space-y-0.5">
             <p>
@@ -219,7 +219,7 @@ export default function SalaryResult({
                   <td className="text-right">{result.ratesUsed.unemployment.employee}%</td>
                 </tr>
                 <tr>
-                  <td>子育支援金</td>
+                  <td>子育て支援金</td>
                   <td className="text-right">{result.ratesUsed.childSupport.total}%</td>
                   <td className="text-right">{result.ratesUsed.childSupport.employee}%</td>
                 </tr>

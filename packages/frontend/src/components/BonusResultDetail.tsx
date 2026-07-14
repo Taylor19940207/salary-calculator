@@ -2,10 +2,10 @@ import type { BonusCalculationResult } from '../types';
 import EditableAmount from './EditableAmount';
 import { formatYen, mergedBonusDeductions, LABEL_TO_FIELD, type DeductionOverrides } from '../format';
 
-// 賞与の内訳ビュー。多人版の展開行と単一版の下段カードの両方で使う。
+// 賞与の内訳ビュー。複数人版の展開行と単一計算の下段カードの両方で使う。
 // ResultDetail と同じ構成（3列サマリー → 左=支給＋メタ / 右=控除内訳）に合わせ、
 // teal の色調とバッジで「給与とは別計算」であることを示す。
-// 健保・介護・子育ては表の原生値（小数）を表示し、手動調整できる。
+// 健保・介護・子育ては表の丸め前の金額（小数）を表示し、手動調整できる。
 interface Props {
   result: BonusCalculationResult;
   overrides: DeductionOverrides;
@@ -95,7 +95,7 @@ export default function BonusResultDetail({ result, overrides, onChangeOverrides
             })}
             <p className="text-xs text-gray-500 pt-1 border-t border-teal-100">
               端数（小数）がある項目は
-              <span className="px-1 bg-amber-50 border border-amber-300 rounded">淡黄色</span>
+              <span className="px-1 bg-amber-50 border border-amber-300 rounded">薄い黄色</span>
               で表示され、金額を直接編集できます（整数に調整すると色が消え、合計・PDF・CSVに反映）。
             </p>
           </div>

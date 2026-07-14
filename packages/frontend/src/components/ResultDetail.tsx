@@ -2,9 +2,9 @@ import type { SalaryCalculationResult } from '../types';
 import EditableAmount from './EditableAmount';
 import { formatYen, mergedSalaryDeductions, LABEL_TO_FIELD, type DeductionOverrides } from '../format';
 
-// 多人版の明細行を展開したときに表示する内訳ビュー。
+// 複数人版の明細行を展開したときに表示する内訳ビュー。
 // 単人版 SalaryResult の内訳部分と同じ内容（ヒーロー部を除く）。
-// 健保・介護・子育ては表の原生値（小数）を表示し、手動調整できる。
+// 健保・介護・子育ては表の丸め前の金額（小数）を表示し、手動調整できる。
 interface Props {
   result: SalaryCalculationResult;
   overrides: DeductionOverrides;
@@ -54,7 +54,7 @@ export default function ResultDetail({ result, overrides, onChangeOverrides }: P
           {/* メタ情報（等級・料率）— 左カラム下部の余白に配置 */}
           <div className="bg-blue-50 rounded-lg p-4 space-y-2 text-xs">
             <p className="font-medium text-blue-900">
-              ※ 本計算は {result.ratesUsed.effectiveDate} 版費率を使用
+              ※ 本計算は {result.ratesUsed.effectiveDate} 版の料率を使用
             </p>
             <div className="text-blue-700 space-y-0.5">
               <p>
@@ -109,7 +109,7 @@ export default function ResultDetail({ result, overrides, onChangeOverrides }: P
                     <td className="text-right">{result.ratesUsed.unemployment.employee}%</td>
                   </tr>
                   <tr>
-                    <td>子育支援金</td>
+                    <td>子育て支援金</td>
                     <td className="text-right">{result.ratesUsed.childSupport.total}%</td>
                     <td className="text-right">{result.ratesUsed.childSupport.employee}%</td>
                   </tr>
@@ -157,7 +157,7 @@ export default function ResultDetail({ result, overrides, onChangeOverrides }: P
             })}
             <p className="text-xs text-gray-500 pt-1 border-t border-gray-100">
               端数（小数）がある項目は
-              <span className="px-1 bg-amber-50 border border-amber-300 rounded">淡黄色</span>
+              <span className="px-1 bg-amber-50 border border-amber-300 rounded">薄い黄色</span>
               で表示され、金額を直接編集できます（整数に調整すると色が消え、合計・PDF・CSVに反映）。
             </p>
           </div>

@@ -76,7 +76,7 @@ export default function BatchCalculator({ prefectures }: Props) {
   const [bonusPaymentDate, setBonusPaymentDate] = useState(''); // 全明細に共通の賞与支給日
   const [periodStart, setPeriodStart] = useState(''); // 全明細に共通の給与計算期間（開始）
   const [periodEnd, setPeriodEnd] = useState('');     // 全明細に共通の給与計算期間（終了）
-  // 健保・介護・子育て支援金の表示金額の手動調整（従業員ごと。表の原生小数値が既定）。
+  // 健保・介護・子育て支援金の表示金額の手動調整（従業員ごと。表の丸め前の小数値が既定）。
   // 給与側は結果行のインデックス、賞与側は従業員コードをキーにする
   const [salaryOvByRow, setSalaryOvByRow] = useState<Record<number, DeductionOverrides>>({});
   const [bonusOvById, setBonusOvById] = useState<Record<string, DeductionOverrides>>({});
@@ -87,7 +87,7 @@ export default function BatchCalculator({ prefectures }: Props) {
 
   const active = employees[activeIdx];
 
-  // 給与の集計。健保・介護・子育ては表の原生値（＋手動調整）で表示するため、
+  // 給与の集計。健保・介護・子育ては表の丸め前の金額（＋手動調整）で表示するため、
   // 合計もフロントで merged 値から再集計する（バックエンドの summary は法定丸め後のみ）
   const salaryTotals = !result
     ? null
@@ -318,7 +318,7 @@ export default function BatchCalculator({ prefectures }: Props) {
       return;
     }
     try {
-      // 画面表示と同じ値（表の原生小数＋手動調整）をCSVにも反映する
+      // 画面表示と同じ値（表の丸め前の小数＋手動調整）をCSVにも反映する
       const adjusted = result.results.map((r, i) => {
         if (r.error) return r;
         const m = mergedSalaryDeductions(r.result, salaryOvByRow[i] ?? {});
@@ -424,31 +424,35 @@ export default function BatchCalculator({ prefectures }: Props) {
       {/* タブ列（横スクロール可能）。モバイルではボタンを下段に分離 */}
       <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 border-b border-gray-200">
         <div className="w-full sm:flex-1 flex gap-1 overflow-x-auto pb-px">
+          {/* button の中に button は入れられない（invalid HTML）ため、
+              タブ切替と削除は div コンテナ内の兄弟ボタンとして並べる */}
           {employees.map((emp, i) => (
-            <button
+            <div
               key={i}
-              onClick={() => setActiveIdx(i)}
-              className={`group flex items-center gap-2 whitespace-nowrap px-4 py-2 rounded-t-lg border border-b-0 text-sm ${
+              className={`flex items-center whitespace-nowrap rounded-t-lg border border-b-0 text-sm ${
                 i === activeIdx
                   ? 'bg-white border-gray-300 text-teal-700 font-medium -mb-px'
                   : 'bg-gray-100 border-transparent text-gray-600 hover:bg-gray-200'
               }`}
             >
-              <span>{emp.name || emp.id || `従業員 ${i + 1}`}</span>
+              <button
+                type="button"
+                onClick={() => setActiveIdx(i)}
+                className={`py-2 pl-4 ${employees.length > 1 ? 'pr-1' : 'pr-4'} focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded-t-lg`}
+              >
+                {emp.name || emp.id || `従業員 ${i + 1}`}
+              </button>
               {employees.length > 1 && (
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeEmployee(i);
-                  }}
-                  className="inline-flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                  onClick={() => removeEmployee(i)}
+                  className="inline-flex h-6 w-6 mr-2 items-center justify-center rounded text-gray-500 hover:bg-red-50 hover:text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                   aria-label={`${emp.name || emp.id || `従業員 ${i + 1}`}を削除`}
                 >
                   <span aria-hidden="true">×</span>
                 </button>
               )}
-            </button>
+            </div>
           ))}
         </div>
         <div className="flex gap-2 sm:shrink-0">
