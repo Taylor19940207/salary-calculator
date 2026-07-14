@@ -126,9 +126,23 @@ interface Props {
   grades: GradeInfo[];
 }
 
+function SectionHeader({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="border-b border-gray-200 pb-2">
+      <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+      <p className="mt-1 text-xs text-gray-600">{description}</p>
+    </div>
+  );
+}
+
 export default function EmployeeFormFields({ value: d, onChange, prefectures, grades }: Props) {
   return (
     <div className="space-y-6">
+      <SectionHeader
+        title="1. 従業員・給与基本情報"
+        description="従業員コード、支給額、対象月、都道府県、扶養人数を入力します。"
+      />
+
       {/* 従業員識別 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
@@ -236,7 +250,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
             />
             <span className="absolute right-4 top-2.5 text-gray-500">円</span>
           </div>
-          <p className="mt-1 text-xs text-gray-400">所得税は非課税・社会保険の基数には算入</p>
+          <p className="mt-1 text-xs text-gray-600">所得税は非課税・社会保険の基数には算入</p>
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">出張手当（非課税）</label>
@@ -249,7 +263,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
             />
             <span className="absolute right-4 top-2.5 text-gray-500">円</span>
           </div>
-          <p className="mt-1 text-xs text-gray-400">実費弁償のため非課税・社会保険の基数にも不算入</p>
+          <p className="mt-1 text-xs text-gray-600">実費弁償のため非課税・社会保険の基数にも不算入</p>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -319,6 +333,11 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
         </div>
       </div>
 
+      <SectionHeader
+        title="2. 保険・税の控除"
+        description="社会保険、雇用保険、住民税、標準報酬月額の扱いを確認します。"
+      />
+
       {/* 社会保険加入 */}
       <div className="flex items-start">
         <input
@@ -349,7 +368,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
           <option value="general">一般被保険者（加入）</option>
           <option value="none">未加入（法人代表・役員など）</option>
         </select>
-        <p className="mt-1 text-xs text-gray-400">
+        <p className="mt-1 text-xs text-gray-600">
           法人代表・役員は雇用保険に加入できません（社会保険には加入可）。一般従業員は通常「一般被保険者」を選択してください。
         </p>
       </div>
@@ -373,7 +392,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
               </option>
             ))}
           </select>
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-gray-600">
             実務では入社時・定時決定（算定基礎届）・随時改定で決まった等級が使われるため、残業などで今月の支給額が変動しても等級は変わりません。会社で決定済みの等級があればこちらで指定してください。
           </p>
         </div>
@@ -394,20 +413,27 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
             />
             <span className="absolute right-4 top-2.5 text-gray-500">円</span>
           </div>
-          <p className="mt-1 text-xs text-gray-400">
+          <p className="mt-1 text-xs text-gray-600">
             決定通知書の月割額を入力（6月分は端数調整あり）。前年所得なしは空欄
           </p>
         </div>
       </div>
+
+      <SectionHeader
+        title="3. 勤怠調整"
+        description="残業・休日・深夜・欠勤がある月だけ開いて入力します。"
+      />
 
       {/* 残業・欠勤（展開可能） */}
       <div>
         <button
           type="button"
           onClick={() => onChange({ showOvertime: !d.showOvertime })}
-          className="text-sm text-teal-600 hover:text-teal-700 font-medium"
+          className="inline-flex min-h-11 items-center rounded-lg border border-teal-200 px-3 text-sm font-medium text-teal-700 hover:bg-teal-50 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+          aria-expanded={d.showOvertime}
         >
-          {d.showOvertime ? '▼' : '▶'} 残業・欠勤を追加
+          <span className="mr-2" aria-hidden="true">{d.showOvertime ? '▼' : '▶'}</span>
+          残業・欠勤を追加
         </button>
 
         {d.showOvertime && (
@@ -427,7 +453,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
                   />
                   <span className="absolute right-3 top-2 text-xs text-gray-500">h</span>
                 </div>
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-gray-600">
                   基準時給・欠勤日割の分母。祝日の多い月は少なめ（例: 5月 152h）
                 </p>
               </div>
@@ -490,7 +516,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
                   />
                   <span className="absolute right-3 top-2 text-xs text-gray-500">日</span>
                 </div>
-                <p className="mt-1 text-xs text-gray-400">
+                <p className="mt-1 text-xs text-gray-600">
                   日割額 = 月給 ÷ 所定{Math.round((Number(d.scheduledMonthlyHours) || 160) / 8)}日（所定時間 ÷ 8h）
                 </p>
               </div>
@@ -499,8 +525,13 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
         )}
       </div>
 
+      <SectionHeader
+        title="4. 賞与"
+        description="賞与支給がある月だけ有効にします。給与とは別計算です。"
+      />
+
       {/* 賞与（今月支給あり） */}
-      <div className="border-t pt-4">
+      <div>
         <label className="flex items-start cursor-pointer">
           <input
             type="checkbox"
@@ -542,7 +573,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
                   />
                   <span className="absolute right-4 top-2.5 text-gray-500">円</span>
                 </div>
-                <p className="mt-1 text-xs text-gray-400">賞与の所得税率の基準。前月の給与がない場合は 0 を入力（特例・月額表）</p>
+                <p className="mt-1 text-xs text-gray-600">賞与の所得税率の基準。前月の給与がない場合は 0 を入力（特例・月額表）</p>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -558,7 +589,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
                   />
                   <span className="absolute right-3 top-2 text-xs text-gray-500">円</span>
                 </div>
-                <p className="mt-1 text-xs text-gray-400">健保573万累計上限の判定用</p>
+                <p className="mt-1 text-xs text-gray-600">健保573万累計上限の判定用</p>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">賞与計算期間の月数</label>
@@ -570,7 +601,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
                   min="1"
                   max="12"
                 />
-                <p className="mt-1 text-xs text-gray-400">特例計算時の除数（6超で12）</p>
+                <p className="mt-1 text-xs text-gray-600">特例計算時の除数（6超で12）</p>
               </div>
             </div>
           </div>

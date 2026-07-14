@@ -1,6 +1,6 @@
 import type { BonusInput, BonusCalculationResult, InsuranceRates } from '../types/index.js';
 import { getInsuranceRates } from '../db/queries.js';
-import { calculateIncomeTax, roundEmployeeBurden } from './salaryCalculator.js';
+import { calculateIncomeTax, roundEmployeeBurden, round2 } from './salaryCalculator.js';
 import { bonusTaxRate } from './bonusTaxRateTable2026.js';
 
 // 標準賞与額の上限（令和8年度）
@@ -58,6 +58,7 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
     },
   };
 
+  // deductions = 法定丸め後（正式な徴収額）。deductionsRaw = 丸め前の生値（銭単位、明細の表示切替用）
   const deductions = {
     healthInsurance: 0,
     nursingCare: 0,
@@ -67,6 +68,7 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
     incomeTax: 0,
     total: 0,
   };
+  const deductionsRaw = { ...deductions };
   const breakdown: BonusCalculationResult['breakdown'] = {
     income: [{ label: '賞与', amount: bonus }],
     deductions: [],
@@ -77,45 +79,49 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
     const capNote =
       healthStandardBonus < standardBonusAmount ? `（年度累計573万上限適用後 ¥${healthStandardBonus.toLocaleString()}）` : '';
 
-    deductions.healthInsurance = roundEmployeeBurden(
-      healthStandardBonus * (ratesUsed.healthInsurance.employee / 100)
-    );
+    const healthInsuranceRaw = healthStandardBonus * (ratesUsed.healthInsurance.employee / 100);
+    deductions.healthInsurance = roundEmployeeBurden(healthInsuranceRaw);
+    deductionsRaw.healthInsurance = round2(healthInsuranceRaw);
     breakdown.deductions.push({
       label: '健康保険',
       amount: deductions.healthInsurance,
+      rawAmount: deductionsRaw.healthInsurance,
       calculation: `標準賞与額 ¥${standardBonusAmount.toLocaleString()}${capNote} × ${ratesUsed.healthInsurance.employee}%（総料率 ${ratesUsed.healthInsurance.total}% の労使折半）`,
       sourceUrl: ratesUsed.sourceUrls.healthInsurance,
     });
 
     if (isNursing) {
-      deductions.nursingCare = roundEmployeeBurden(
-        healthStandardBonus * (ratesUsed.nursingCare.employee / 100)
-      );
+      const nursingCareRaw = healthStandardBonus * (ratesUsed.nursingCare.employee / 100);
+      deductions.nursingCare = roundEmployeeBurden(nursingCareRaw);
+      deductionsRaw.nursingCare = round2(nursingCareRaw);
       breakdown.deductions.push({
         label: '介護保険',
         amount: deductions.nursingCare,
+        rawAmount: deductionsRaw.nursingCare,
         calculation: `標準賞与額 ¥${healthStandardBonus.toLocaleString()} × ${ratesUsed.nursingCare.employee}%（総料率 ${ratesUsed.nursingCare.total}% の労使折半）`,
       });
     }
 
     const pensionCapNote =
       pensionStandardBonus < standardBonusAmount ? `（1回150万上限適用後 ¥${pensionStandardBonus.toLocaleString()}）` : '';
-    deductions.employeePension = roundEmployeeBurden(
-      pensionStandardBonus * (ratesUsed.employeePension.employee / 100)
-    );
+    const employeePensionRaw = pensionStandardBonus * (ratesUsed.employeePension.employee / 100);
+    deductions.employeePension = roundEmployeeBurden(employeePensionRaw);
+    deductionsRaw.employeePension = round2(employeePensionRaw);
     breakdown.deductions.push({
       label: '厚生年金',
       amount: deductions.employeePension,
+      rawAmount: deductionsRaw.employeePension,
       calculation: `標準賞与額 ¥${standardBonusAmount.toLocaleString()}${pensionCapNote} × ${ratesUsed.employeePension.employee}%（総料率 ${ratesUsed.employeePension.total}% の労使折半）`,
       sourceUrl: ratesUsed.sourceUrls.pension,
     });
 
-    deductions.childSupport = roundEmployeeBurden(
-      healthStandardBonus * (ratesUsed.childSupport.employee / 100)
-    );
+    const childSupportRaw = healthStandardBonus * (ratesUsed.childSupport.employee / 100);
+    deductions.childSupport = roundEmployeeBurden(childSupportRaw);
+    deductionsRaw.childSupport = round2(childSupportRaw);
     breakdown.deductions.push({
       label: '子ども・子育て支援金',
       amount: deductions.childSupport,
+      rawAmount: deductionsRaw.childSupport,
       calculation: `標準賞与額 ¥${healthStandardBonus.toLocaleString()} × ${ratesUsed.childSupport.employee}%（総料率 ${ratesUsed.childSupport.total}% の労使折半）`,
     });
 
@@ -126,10 +132,13 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
   const enrollInUnemploymentInsurance = input.enrollInUnemploymentInsurance !== false;
   if (enrollInUnemploymentInsurance) {
     // 雇用保険は標準賞与額ではなく賞与の実支給額に料率を掛ける
-    deductions.unemployment = roundEmployeeBurden(bonus * (ratesUsed.unemployment.employee / 100));
+    const unemploymentRaw = bonus * (ratesUsed.unemployment.employee / 100);
+    deductions.unemployment = roundEmployeeBurden(unemploymentRaw);
+    deductionsRaw.unemployment = round2(unemploymentRaw);
     breakdown.deductions.push({
       label: '雇用保険',
       amount: deductions.unemployment,
+      rawAmount: deductionsRaw.unemployment,
       calculation: `賞与総額 ¥${bonus.toLocaleString()} × ${ratesUsed.unemployment.employee}%（総料率 ${ratesUsed.unemployment.total}%）`,
       sourceUrl: ratesUsed.sourceUrls.unemployment,
     });
@@ -137,6 +146,7 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
     breakdown.deductions.push({
       label: '雇用保険',
       amount: 0,
+      rawAmount: 0,
       calculation: '未加入（法人代表・役員など、雇用保険の被保険者に該当しないため）',
     });
   }
@@ -156,6 +166,8 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
   let taxMethod: string;
   let taxRate: number | null = null;
 
+  // 所得税は法定丸め後の社保額（socialTotal）を基準に計算する唯一の値
+  // （月給と同じ理由で、raw版でも同じ値を使う。所得税自体は端数処理の対象外＝1円未満切捨てのみ）
   if (prev <= 0 || bonusAfterInsurance > prev * 10) {
     // 特例: 月額表甲欄を使い、賞与(社保控除後)÷月数 の税額を月数倍する
     const base = bonusAfterInsurance / months;
@@ -165,6 +177,7 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
     breakdown.deductions.push({
       label: '所得税（源泉徴収）',
       amount: deductions.incomeTax,
+      rawAmount: deductions.incomeTax,
       calculation: `${taxMethod}: (¥${bonusAfterInsurance.toLocaleString()} ÷ ${months}) を月額表甲欄・扶養${input.dependents}人にあて ×${months}`,
     });
   } else {
@@ -177,12 +190,23 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
     breakdown.deductions.push({
       label: '所得税（源泉徴収）',
       amount: deductions.incomeTax,
+      rawAmount: deductions.incomeTax,
       calculation: `賞与算出率表 甲欄: 前月社保控除後給与 ¥${prev.toLocaleString()}・扶養${input.dependents}人 → ${taxRate}% × 賞与(社保控除後) ¥${bonusAfterInsurance.toLocaleString()}`,
     });
   }
+  deductionsRaw.incomeTax = deductions.incomeTax;
 
   deductions.total = socialTotal + deductions.incomeTax;
   const netBonus = bonus - deductions.total;
+
+  const socialTotalRaw =
+    deductionsRaw.healthInsurance +
+    deductionsRaw.nursingCare +
+    deductionsRaw.employeePension +
+    deductionsRaw.unemployment +
+    deductionsRaw.childSupport;
+  deductionsRaw.total = round2(socialTotalRaw + deductionsRaw.incomeTax);
+  const netBonusRaw = round2(bonus - deductionsRaw.total);
 
   return {
     bonusAmount: bonus,
@@ -190,7 +214,9 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
     healthStandardBonus,
     pensionStandardBonus,
     deductions,
+    deductionsRaw,
     netBonus,
+    netBonusRaw,
     taxMethod,
     taxRate,
     breakdown,

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { SalaryInput, SalaryCalculationResult, BonusInput, BonusCalculationResult } from '../types';
 import Payslip from './Payslip';
+import EditableAmount from './EditableAmount';
+import { formatYen, mergedSalaryDeductions, LABEL_TO_FIELD, type DeductionOverrides } from '../format';
 
 interface Props {
   result: SalaryCalculationResult;
@@ -8,29 +10,43 @@ interface Props {
   // 賞与あり: 明細出力を給与＋賞与の2ページ1ファイルにする
   bonusResult?: BonusCalculationResult | null;
   bonusInput?: BonusInput | null;
+  // 健保・介護・子育て支援金の金額の手動調整（表の原生小数値が既定）
+  overrides: DeductionOverrides;
+  onChangeOverrides: (ov: DeductionOverrides) => void;
+  bonusOverrides: DeductionOverrides;
 }
 
-export default function SalaryResult({ result, input, bonusResult, bonusInput }: Props) {
+export default function SalaryResult({
+  result,
+  input,
+  bonusResult,
+  bonusInput,
+  overrides,
+  onChangeOverrides,
+  bonusOverrides,
+}: Props) {
   const [showPayslip, setShowPayslip] = useState(false);
   const hasBonus = !!(bonusResult && bonusInput);
+  // 手動調整を反映した控除額・合計・手取（画面・PDF・CSVすべてこの値で統一）
+  const merged = mergedSalaryDeductions(result, overrides);
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+    <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
       {/* 手取額 */}
-      <div className="bg-gradient-to-r from-teal-400 to-teal-500 p-8 text-white">
+      <div className="border-b border-teal-100 bg-teal-50 p-8">
         <div className="flex flex-wrap justify-between items-start gap-2">
-          <h2 className="text-lg font-medium mb-2">手取り額</h2>
+          <h2 className="text-lg font-semibold text-teal-950 mb-2">手取り額</h2>
           {input && (
             <button
               onClick={() => setShowPayslip(true)}
-              className="px-3.5 py-2 bg-white/15 hover:bg-white/25 border border-white/40 rounded-lg text-sm font-semibold backdrop-blur transition-colors"
+              className="px-3.5 py-2 bg-white hover:bg-teal-100 border border-teal-300 rounded-lg text-sm font-semibold text-teal-800 shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
             >
               {hasBonus ? '給与・賞与明細を出力' : '給与明細を出力'}
             </button>
           )}
         </div>
-        <p className="text-4xl sm:text-5xl font-bold">
-          ¥{result.netSalary.toLocaleString()}
+        <p className="text-4xl sm:text-5xl font-bold tabular-nums text-teal-900">
+          ¥{formatYen(merged.netSalary)}
         </p>
       </div>
 
@@ -41,6 +57,8 @@ export default function SalaryResult({ result, input, bonusResult, bonusInput }:
           onClose={() => setShowPayslip(false)}
           bonusResult={bonusResult ?? undefined}
           bonusInput={bonusInput ?? undefined}
+          overrides={overrides}
+          bonusOverrides={bonusOverrides}
         />
       )}
 
@@ -56,7 +74,7 @@ export default function SalaryResult({ result, input, bonusResult, bonusInput }:
           <div>
             <p className="text-gray-600">控除合計</p>
             <p className="text-xl font-semibold text-red-600">
-              -¥{result.deductions.total.toLocaleString()}
+              -¥{formatYen(merged.total)}
             </p>
           </div>
         </div>
@@ -93,16 +111,27 @@ export default function SalaryResult({ result, input, bonusResult, bonusInput }:
             控除内訳（計算過程付）
           </h3>
           <div className="space-y-3">
-            {result.breakdown.deductions.map((item, index) => (
+            {result.breakdown.deductions.map((item, index) => {
+              // 健保・介護・子育ては表の原生値（小数）を表示し、手動調整できる
+              const field = LABEL_TO_FIELD[item.label];
+              return (
               <div key={index} className="space-y-1">
                 <div className="flex justify-between items-start text-sm">
                   <div className="flex-1">
                     <p className="font-medium text-gray-700">{item.label}</p>
                     <p className="text-xs text-gray-500 mt-0.5">{item.calculation}</p>
                   </div>
-                  <p className="font-semibold text-red-600 ml-4">
-                    -¥{item.amount.toLocaleString()}
-                  </p>
+                  {field ? (
+                    <EditableAmount
+                      value={overrides[field]}
+                      raw={item.rawAmount}
+                      onChange={(v) => onChangeOverrides({ ...overrides, [field]: v })}
+                    />
+                  ) : (
+                    <p className="font-semibold text-red-600 ml-4">
+                      -¥{formatYen(item.amount)}
+                    </p>
+                  )}
                 </div>
                 {item.sourceUrl && (
                   <a
@@ -115,7 +144,11 @@ export default function SalaryResult({ result, input, bonusResult, bonusInput }:
                   </a>
                 )}
               </div>
-            ))}
+              );
+            })}
+            <p className="text-xs text-gray-500 pt-1 border-t border-gray-100">
+              健康保険・介護保険・子育て支援金は協会けんぽ保険料額表の原生値（小数あり）を表示しています。各社の端数処理（労使特約等）に合わせて金額を直接編集でき、合計・PDF・CSVに反映されます。
+            </p>
           </div>
         </div>
 
@@ -124,7 +157,7 @@ export default function SalaryResult({ result, input, bonusResult, bonusInput }:
         {/* メタ情報 */}
         <div className="bg-blue-50 rounded-lg p-4 space-y-2 text-xs">
           <p className="font-medium text-blue-900">
-            ※ 本次計算使用 {result.ratesUsed.effectiveDate} 版費率
+            ※ 本計算は {result.ratesUsed.effectiveDate} 版費率を使用
           </p>
           <div className="text-blue-700 space-y-0.5">
             <p>
@@ -192,7 +225,7 @@ export default function SalaryResult({ result, input, bonusResult, bonusInput }:
             </table>
           </div>
           <p className="text-blue-600 text-xs">
-            データ来源: 協会けんぽ、厚生労働省、日本年金機構
+            データソース: 協会けんぽ、厚生労働省、日本年金機構
           </p>
         </div>
       </div>

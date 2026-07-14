@@ -64,7 +64,21 @@ export interface SalaryCalculationResult {
     residentTax: number; // 住民税（特別徴収・入力された月割額の転記）
     total: number;
   };
+  // deductions と同じ形だが、健保・介護・厚年・子育て支援金・雇用保険の5項目は
+  // 被保険者負担分の法定端数処理（50銭以下切捨て・50銭超切上げ）前の生値（銭単位）。
+  // 所得税・住民税は端数処理の対象外のため deductions と同じ値
+  deductionsRaw: {
+    healthInsurance: number;
+    nursingCare: number;
+    employeePension: number;
+    unemployment: number;
+    childSupport: number;
+    incomeTax: number;
+    residentTax: number;
+    total: number;
+  };
   netSalary: number;
+  netSalaryRaw: number;
   breakdown: {
     income: Array<{
       label: string;
@@ -74,6 +88,7 @@ export interface SalaryCalculationResult {
     deductions: Array<{
       label: string;
       amount: number;
+      rawAmount: number;
       calculation: string;
       sourceUrl?: string;
     }>;
@@ -109,12 +124,22 @@ export interface BonusCalculationResult {
     incomeTax: number;
     total: number;
   };
+  deductionsRaw: {
+    healthInsurance: number;
+    nursingCare: number;
+    employeePension: number;
+    unemployment: number;
+    childSupport: number;
+    incomeTax: number;
+    total: number;
+  };
   netBonus: number;
+  netBonusRaw: number;
   taxMethod: string;
   taxRate: number | null;
   breakdown: {
     income: Array<{ label: string; amount: number; description?: string }>;
-    deductions: Array<{ label: string; amount: number; calculation: string; sourceUrl?: string }>;
+    deductions: Array<{ label: string; amount: number; rawAmount: number; calculation: string; sourceUrl?: string }>;
   };
   ratesUsed: InsuranceRates;
 }

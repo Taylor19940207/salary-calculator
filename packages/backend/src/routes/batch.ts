@@ -276,6 +276,10 @@ router.post('/calculate/export-csv', async (req, res) => {
       return res.status(400).json({ error: 'Results array required' });
     }
 
+    // フロントが画面表示と同じ値（健保・介護・子育ては表の原生小数＋手動調整）を送ってくるため、
+    // 値をそのまま出力する。整数は整数のまま、端数がある場合のみ小数点2桁で表示
+    const fmtNum = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(2));
+
     // 生成 CSV 標題
     const headers = [
       '員工編號',
@@ -298,19 +302,22 @@ router.post('/calculate/export-csv', async (req, res) => {
         return `${r.id || ''},${r.name || ''},ERROR,,,,,,,,,"${r.error}"`;
       }
 
+      const d = r.result.deductions;
+      const netSalary = r.result.netSalary;
+
       return [
         r.id || '',
         r.name || '',
         r.result.grossSalary,
-        r.result.deductions.healthInsurance,
-        r.result.deductions.nursingCare,
-        r.result.deductions.employeePension,
-        r.result.deductions.unemployment,
-        r.result.deductions.childSupport,
-        r.result.deductions.incomeTax,
-        r.result.deductions.residentTax ?? 0,
-        r.result.deductions.total,
-        r.result.netSalary,
+        fmtNum(d.healthInsurance),
+        fmtNum(d.nursingCare),
+        fmtNum(d.employeePension),
+        fmtNum(d.unemployment),
+        fmtNum(d.childSupport),
+        fmtNum(d.incomeTax),
+        fmtNum(d.residentTax ?? 0),
+        fmtNum(d.total),
+        fmtNum(netSalary),
       ].join(',');
     });
 

@@ -11,6 +11,12 @@ import ResultDetail from './ResultDetail';
 import BonusResultDetail from './BonusResultDetail';
 import Payslip from './Payslip';
 import type { SalaryInput, BonusInput, BonusCalculationResult } from '../types';
+import {
+  formatYen,
+  mergedSalaryDeductions,
+  mergedBonusDeductions,
+  type DeductionOverrides,
+} from '../format';
 
 // 賞与計算結果を従業員行に紐づけるための型（失敗時は error を保持し、行に明示する）
 interface BonusCell {
@@ -53,9 +59,11 @@ export default function BatchCalculator({ prefectures }: Props) {
   const [showCsv, setShowCsv] = useState(false);
   const [grades, setGrades] = useState<GradeInfo[]>([]);
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
-  // 出力する明細（賞与ありなら給与＋賞与を1ファイル2ページで出す）
+  // 出力する明細（賞与ありなら給与＋賞与を1ファイル2ページで出す）。
+  // index は給与側の手動調整（salaryOvByRow）を引くための結果行番号
   const [payslipFor, setPayslipFor] = useState<{
     row: BatchRow;
+    index: number;
     bonus: { result: BonusCalculationResult; input: BonusInput } | null;
   } | null>(null);
   // 賞与計算結果は従業員コード(id)で引く。行の並び順に依存させない
@@ -66,6 +74,10 @@ export default function BatchCalculator({ prefectures }: Props) {
   const [bonusPaymentDate, setBonusPaymentDate] = useState(''); // 全明細に共通の賞与支給日
   const [periodStart, setPeriodStart] = useState(''); // 全明細に共通の給与計算期間（開始）
   const [periodEnd, setPeriodEnd] = useState('');     // 全明細に共通の給与計算期間（終了）
+  // 健保・介護・子育て支援金の表示金額の手動調整（従業員ごと。表の原生小数値が既定）。
+  // 給与側は結果行のインデックス、賞与側は従業員コードをキーにする
+  const [salaryOvByRow, setSalaryOvByRow] = useState<Record<number, DeductionOverrides>>({});
+  const [bonusOvById, setBonusOvById] = useState<Record<string, DeductionOverrides>>({});
 
   useEffect(() => {
     getGrades().then(setGrades).catch(() => setGrades([]));
@@ -73,21 +85,39 @@ export default function BatchCalculator({ prefectures }: Props) {
 
   const active = employees[activeIdx];
 
+  // 給与の集計。健保・介護・子育ては表の原生値（＋手動調整）で表示するため、
+  // 合計もフロントで merged 値から再集計する（バックエンドの summary は法定丸め後のみ）
+  const salaryTotals = !result
+    ? null
+    : (() => {
+        let totalNetSalary = 0;
+        result.results.forEach((r, i) => {
+          if (r.error) return;
+          totalNetSalary += mergedSalaryDeductions(r.result, salaryOvByRow[i] ?? {}).netSalary;
+        });
+        return { totalNetSalary: Math.round(totalNetSalary * 100) / 100 };
+      })();
+
   // 賞与の集計（バックエンドの summary は給与のみ。賞与はフロントで別途集計し分列表示する）
-  const bonusCells = Object.values(bonusById);
+  const bonusCells = Object.entries(bonusById);
   const bonusOk = bonusCells.filter(
-    (b): b is BonusCell & { result: BonusCalculationResult } => !!b.result
+    (e): e is [string, BonusCell & { result: BonusCalculationResult }] => !!e[1].result
   );
   const bonusSummary =
     bonusOk.length === 0
       ? null
       : {
           count: bonusOk.length,
-          gross: bonusOk.reduce((s, b) => s + b.result.bonusAmount, 0),
-          deductions: bonusOk.reduce((s, b) => s + b.result.deductions.total, 0),
-          net: bonusOk.reduce((s, b) => s + b.result.netBonus, 0),
+          gross: bonusOk.reduce((s, [, b]) => s + b.result.bonusAmount, 0),
+          net:
+            Math.round(
+              bonusOk.reduce(
+                (s, [id, b]) => s + mergedBonusDeductions(b.result, bonusOvById[id] ?? {}).netBonus,
+                0
+              ) * 100
+            ) / 100,
         };
-  const bonusFailedCount = bonusCells.filter((b) => b.error).length;
+  const bonusFailedCount = bonusCells.filter(([, b]) => b.error).length;
 
   // アクティブな従業員のフィールドを部分更新
   const updateActive = (patch: Partial<EmployeeDraft>) => {
@@ -231,9 +261,12 @@ export default function BatchCalculator({ prefectures }: Props) {
       setBonusById(map);
       setResult(data);
       setExpandedRow(null);
+      // 再計算したら手動調整はリセット
+      setSalaryOvByRow({});
+      setBonusOvById({});
     } catch (err) {
       console.error('Batch calculation failed:', err);
-      setError('批量計算に失敗しました。入力内容を確認してください。');
+      setError('複数人計算に失敗しました。入力内容を確認してください。');
     } finally {
       setLoading(false);
     }
@@ -251,6 +284,8 @@ export default function BatchCalculator({ prefectures }: Props) {
       setBonusById({}); // CSV 経由は賞与非対応
       setResult(data);
       setExpandedRow(null);
+      setSalaryOvByRow({});
+      setBonusOvById({});
     } catch (err) {
       console.error('CSV import failed:', err);
       setError('CSV 取り込みに失敗しました');
@@ -265,7 +300,26 @@ export default function BatchCalculator({ prefectures }: Props) {
       return;
     }
     try {
-      const blob = await exportResultsCsv(result.results);
+      // 画面表示と同じ値（表の原生小数＋手動調整）をCSVにも反映する
+      const adjusted = result.results.map((r, i) => {
+        if (r.error) return r;
+        const m = mergedSalaryDeductions(r.result, salaryOvByRow[i] ?? {});
+        return {
+          ...r,
+          result: {
+            ...r.result,
+            deductions: {
+              ...r.result.deductions,
+              healthInsurance: m.healthInsurance,
+              nursingCare: m.nursingCare,
+              childSupport: m.childSupport,
+              total: m.total,
+            },
+            netSalary: m.netSalary,
+          },
+        };
+      });
+      const blob = await exportResultsCsv(adjusted);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -283,7 +337,7 @@ export default function BatchCalculator({ prefectures }: Props) {
       <h2 className="text-xl font-semibold">複数人の給与計算</h2>
 
       {/* 会社名・支給日・給与計算期間（全従業員の明細に共通・ここで一度だけ入力） */}
-      <div className="bg-white rounded-lg shadow-sm p-4 space-y-3">
+      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-3">
         <div className="flex items-center gap-3">
           <label htmlFor="batch-company" className="text-sm font-medium text-gray-700 whitespace-nowrap w-24">
             会社名
@@ -340,7 +394,7 @@ export default function BatchCalculator({ prefectures }: Props) {
             />
           </div>
         </div>
-        <p className="text-xs text-gray-400">会社名・支給日・給与計算期間・賞与支給日は全員の明細に共通で表示されます（期間は空欄なら給与月の前月1日〜末日）</p>
+        <p className="text-xs text-gray-600">会社名・支給日・給与計算期間・賞与支給日は全員の明細に共通で表示されます（期間は空欄なら給与月の前月1日〜末日）</p>
       </div>
 
       {error && (
@@ -364,16 +418,17 @@ export default function BatchCalculator({ prefectures }: Props) {
             >
               <span>{emp.name || emp.id || `従業員 ${i + 1}`}</span>
               {employees.length > 1 && (
-                <span
+                <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     removeEmployee(i);
                   }}
-                  className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
-                  aria-label="削除"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded text-gray-500 hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                  aria-label={`${emp.name || emp.id || `従業員 ${i + 1}`}を削除`}
                 >
-                  ✕
-                </span>
+                  <span aria-hidden="true">×</span>
+                </button>
               )}
             </button>
           ))}
@@ -396,7 +451,7 @@ export default function BatchCalculator({ prefectures }: Props) {
 
       {/* アクティブな従業員のフォーム */}
       {active && (
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
           <EmployeeFormFields
             value={active}
             onChange={updateActive}
@@ -429,7 +484,7 @@ export default function BatchCalculator({ prefectures }: Props) {
             <textarea
               value={csvInput}
               onChange={(e) => setCsvInput(e.target.value)}
-              placeholder={'貼り付け形式：員工編號,姓名,基本給,通勤手当,都道府県,給与年月,年齢,扶養人数'}
+              placeholder={'貼り付け形式：従業員コード,氏名,基本給,通勤手当,都道府県,給与年月,年齢,扶養人数'}
               className="w-full h-32 px-3 py-2 border rounded-lg text-sm font-mono"
             />
             <button
@@ -439,7 +494,7 @@ export default function BatchCalculator({ prefectures }: Props) {
             >
               CSV を取り込んで計算
             </button>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-xs text-gray-600">
               CSV 経由の計算は上のタブ入力とは別に、貼り付けた行がそのまま計算されます。
             </p>
           </div>
@@ -456,47 +511,49 @@ export default function BatchCalculator({ prefectures }: Props) {
 
       {result && !loading && (
         <div className="space-y-4">
-          <div className="bg-gradient-to-r from-teal-400 to-teal-500 p-6 rounded-lg text-white">
+          <div className="rounded-lg border border-teal-100 bg-teal-50 p-6 text-teal-950">
             <h2 className="text-lg font-semibold mb-4">集計サマリー</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p className="text-sm opacity-90">総人数</p>
-                <p className="text-2xl font-bold">{result.summary.total} 名</p>
+                <p className="text-sm text-teal-700">総人数</p>
+                <p className="text-2xl font-bold tabular-nums">{result.summary.total} 名</p>
               </div>
               <div>
-                <p className="text-sm opacity-90">成功 / 失敗</p>
-                <p className="text-2xl font-bold">
+                <p className="text-sm text-teal-700">成功 / 失敗</p>
+                <p className="text-2xl font-bold tabular-nums">
                   {result.summary.successful} / {result.summary.failed}
                 </p>
               </div>
               <div>
-                <p className="text-sm opacity-90">{bonusSummary ? '給与 総支給額' : '総支給額'}</p>
-                <p className="text-xl font-bold">¥{result.summary.totalGrossSalary.toLocaleString()}</p>
+                <p className="text-sm text-teal-700">{bonusSummary ? '給与 総支給額' : '総支給額'}</p>
+                <p className="text-xl font-bold tabular-nums">¥{result.summary.totalGrossSalary.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-sm opacity-90">{bonusSummary ? '給与 総手取額' : '総手取額'}</p>
-                <p className="text-xl font-bold">¥{result.summary.totalNetSalary.toLocaleString()}</p>
+                <p className="text-sm text-teal-700">{bonusSummary ? '給与 総手取額' : '総手取額'}</p>
+                <p className="text-xl font-bold tabular-nums">
+                  ¥{formatYen(salaryTotals!.totalNetSalary)}
+                </p>
               </div>
             </div>
             {/* 賞与は給与と別計算のため、集計も分列で表示する */}
             {bonusSummary && (
-              <div className="mt-4 pt-4 border-t border-white/30 grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="mt-4 pt-4 border-t border-teal-200 grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <p className="text-sm opacity-90">賞与支給者</p>
-                  <p className="text-xl font-bold">{bonusSummary.count} 名</p>
+                  <p className="text-sm text-teal-700">賞与支給者</p>
+                  <p className="text-xl font-bold tabular-nums">{bonusSummary.count} 名</p>
                 </div>
                 <div>
-                  <p className="text-sm opacity-90">賞与 総支給額</p>
-                  <p className="text-xl font-bold">¥{bonusSummary.gross.toLocaleString()}</p>
+                  <p className="text-sm text-teal-700">賞与 総支給額</p>
+                  <p className="text-xl font-bold tabular-nums">¥{bonusSummary.gross.toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-sm opacity-90">賞与 総手取額</p>
-                  <p className="text-xl font-bold">¥{bonusSummary.net.toLocaleString()}</p>
+                  <p className="text-sm text-teal-700">賞与 総手取額</p>
+                  <p className="text-xl font-bold tabular-nums">¥{formatYen(bonusSummary.net)}</p>
                 </div>
                 <div>
-                  <p className="text-sm opacity-90">給与＋賞与 手取合計</p>
-                  <p className="text-xl font-bold">
-                    ¥{(result.summary.totalNetSalary + bonusSummary.net).toLocaleString()}
+                  <p className="text-sm text-teal-700">給与＋賞与 手取合計</p>
+                  <p className="text-xl font-bold tabular-nums">
+                    ¥{formatYen(salaryTotals!.totalNetSalary + bonusSummary.net)}
                   </p>
                 </div>
               </div>
@@ -515,7 +572,7 @@ export default function BatchCalculator({ prefectures }: Props) {
             CSV 出力
           </button>
 
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
             <div className="p-4 bg-gray-50 border-b">
               <h3 className="font-semibold">明細一覧</h3>
             </div>
@@ -537,6 +594,9 @@ export default function BatchCalculator({ prefectures }: Props) {
                     const isOpen = expandedRow === index;
                     // 従業員コードで賞与を引く（行順序に依存しない）
                     const bonus = (r.id && bonusById[r.id.trim()]) || null;
+                    const bonusKey = r.id?.trim() ?? '';
+                    // 手動調整を反映した控除合計・手取（画面・PDF・CSVで同じ値）
+                    const rowMerged = r.error ? null : mergedSalaryDeductions(r.result, salaryOvByRow[index] ?? {});
                     return (
                       <Fragment key={index}>
                         <tr
@@ -552,6 +612,7 @@ export default function BatchCalculator({ prefectures }: Props) {
                                   e.stopPropagation();
                                   setPayslipFor({
                                     row: r,
+                                    index,
                                     bonus: bonus?.result ? { result: bonus.result, input: bonus.input } : null,
                                   });
                                 }}
@@ -561,7 +622,7 @@ export default function BatchCalculator({ prefectures }: Props) {
                               </button>
                             )}
                           </td>
-                          <td className="px-4 py-2 text-gray-400">
+                          <td className="px-4 py-2 text-gray-500">
                             {expandable && (
                               <span className={`inline-block transition-transform ${isOpen ? 'rotate-90' : ''}`}>
                                 ▶
@@ -589,17 +650,31 @@ export default function BatchCalculator({ prefectures }: Props) {
                             {r.error ? '-' : `¥${r.result.grossSalary.toLocaleString()}`}
                           </td>
                           <td className="px-4 py-2 text-right text-red-600">
-                            {r.error ? '-' : `-¥${r.result.deductions.total.toLocaleString()}`}
+                            {rowMerged ? `-¥${formatYen(rowMerged.total)}` : '-'}
                           </td>
                           <td className="px-4 py-2 text-right font-semibold">
-                            {r.error ? '-' : `¥${r.result.netSalary.toLocaleString()}`}
+                            {rowMerged ? `¥${formatYen(rowMerged.netSalary)}` : '-'}
                           </td>
                         </tr>
                         {isOpen && expandable && (
                           <tr>
                             <td colSpan={6} className="p-0 border-b">
-                              <ResultDetail result={r.result} />
-                              {bonus?.result && <BonusResultDetail result={bonus.result} />}
+                              <ResultDetail
+                                result={r.result}
+                                overrides={salaryOvByRow[index] ?? {}}
+                                onChangeOverrides={(ov) =>
+                                  setSalaryOvByRow((prev) => ({ ...prev, [index]: ov }))
+                                }
+                              />
+                              {bonus?.result && (
+                                <BonusResultDetail
+                                  result={bonus.result}
+                                  overrides={bonusOvById[bonusKey] ?? {}}
+                                  onChangeOverrides={(ov) =>
+                                    setBonusOvById((prev) => ({ ...prev, [bonusKey]: ov }))
+                                  }
+                                />
+                              )}
                               {bonus?.error && (
                                 <div className="p-4 bg-red-50 border-t border-red-100 text-sm text-red-700">
                                   賞与: {bonus.error}
@@ -633,6 +708,8 @@ export default function BatchCalculator({ prefectures }: Props) {
           bonusResult={payslipFor.bonus?.result}
           bonusInput={payslipFor.bonus?.input}
           defaultBonusPaymentDate={bonusPaymentDate || undefined}
+          overrides={salaryOvByRow[payslipFor.index] ?? {}}
+          bonusOverrides={bonusOvById[payslipFor.row.id?.trim() ?? ''] ?? {}}
         />
       )}
     </div>

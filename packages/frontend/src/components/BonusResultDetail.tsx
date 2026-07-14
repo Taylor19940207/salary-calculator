@@ -1,14 +1,19 @@
 import type { BonusCalculationResult } from '../types';
+import EditableAmount from './EditableAmount';
+import { formatYen, mergedBonusDeductions, LABEL_TO_FIELD, type DeductionOverrides } from '../format';
 
 // 賞与の内訳ビュー。多人版の展開行と単一版の下段カードの両方で使う。
 // ResultDetail と同じ構成（3列サマリー → 左=支給＋メタ / 右=控除内訳）に合わせ、
 // teal の色調とバッジで「給与とは別計算」であることを示す。
+// 健保・介護・子育ては表の原生値（小数）を表示し、手動調整できる。
 interface Props {
   result: BonusCalculationResult;
+  overrides: DeductionOverrides;
+  onChangeOverrides: (ov: DeductionOverrides) => void;
 }
 
-export default function BonusResultDetail({ result }: Props) {
-  const d = result.deductions;
+export default function BonusResultDetail({ result, overrides, onChangeOverrides }: Props) {
+  const merged = mergedBonusDeductions(result, overrides);
   return (
     <div className="p-5 bg-teal-50/40 border-t border-teal-100 space-y-5 text-sm">
       <div className="flex items-center gap-2">
@@ -24,11 +29,11 @@ export default function BonusResultDetail({ result }: Props) {
         </div>
         <div>
           <p className="text-gray-600 text-xs">控除合計</p>
-          <p className="text-lg font-semibold text-red-600">-¥{d.total.toLocaleString()}</p>
+          <p className="text-lg font-semibold text-red-600">-¥{formatYen(merged.total)}</p>
         </div>
         <div>
           <p className="text-gray-600 text-xs">手取額</p>
-          <p className="text-lg font-semibold text-teal-700">¥{result.netBonus.toLocaleString()}</p>
+          <p className="text-lg font-semibold text-teal-700">¥{formatYen(merged.netBonus)}</p>
         </div>
       </div>
 
@@ -66,17 +71,31 @@ export default function BonusResultDetail({ result }: Props) {
         <div>
           <h4 className="font-semibold text-gray-900 mb-2">控除内訳（計算過程付）</h4>
           <div className="space-y-3">
-            {result.breakdown.deductions.map((item, index) => (
-              <div key={index} className="flex justify-between items-start">
-                <div className="flex-1">
-                  <p className="font-medium text-gray-700">{item.label}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{item.calculation}</p>
+            {result.breakdown.deductions.map((item, index) => {
+              const field = LABEL_TO_FIELD[item.label];
+              return (
+                <div key={index} className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <p className="font-medium text-gray-700">{item.label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{item.calculation}</p>
+                  </div>
+                  {field ? (
+                    <EditableAmount
+                      value={overrides[field]}
+                      raw={item.rawAmount}
+                      onChange={(v) => onChangeOverrides({ ...overrides, [field]: v })}
+                    />
+                  ) : (
+                    <p className="font-semibold text-red-600 ml-4 whitespace-nowrap">
+                      -¥{formatYen(item.amount)}
+                    </p>
+                  )}
                 </div>
-                <p className="font-semibold text-red-600 ml-4 whitespace-nowrap">
-                  -¥{item.amount.toLocaleString()}
-                </p>
-              </div>
-            ))}
+              );
+            })}
+            <p className="text-xs text-gray-500 pt-1 border-t border-teal-100">
+              健康保険・介護保険・子育て支援金は原生値（小数あり）を表示。金額を直接編集でき、合計・PDF・CSVに反映されます。
+            </p>
           </div>
         </div>
       </div>

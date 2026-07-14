@@ -11,6 +11,7 @@ import type {
   BonusCalculationResult,
   Prefecture,
 } from './types';
+import type { DeductionOverrides } from './format';
 
 function App() {
   const [mode, setMode] = useState<'single' | 'batch'>('single');
@@ -18,6 +19,10 @@ function App() {
   const [lastInput, setLastInput] = useState<SalaryInput | null>(null);
   const [bonusResult, setBonusResult] = useState<BonusCalculationResult | null>(null);
   const [bonusInput, setBonusInput] = useState<BonusInput | null>(null);
+  // 健保・介護・子育て支援金の表示金額の手動調整（表の原生小数値が既定。
+  // 各社の労使特約に合わせて顧客が上書きし、画面・PDF・CSVすべてに反映される）
+  const [salaryOverrides, setSalaryOverrides] = useState<DeductionOverrides>({});
+  const [bonusOverrides, setBonusOverrides] = useState<DeductionOverrides>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prefectures, setPrefectures] = useState<Prefecture[]>([]);
@@ -45,6 +50,9 @@ function App() {
       setLastInput(input);
       setBonusResult(bonusCalculationResult);
       setBonusInput(bonus ?? null);
+      // 再計算したら手動調整はリセット（前回の上書きが新しい結果に紛れ込まないように）
+      setSalaryOverrides({});
+      setBonusOverrides({});
     } catch (err) {
       console.error('Calculation error:', err);
       setError('計算中にエラーが発生しました。入力内容を確認してください。');
@@ -63,7 +71,7 @@ function App() {
                 日本給与手取り計算ツール
               </h1>
               <p className="mt-1 sm:mt-2 text-sm text-gray-600">
-                2026年最新法令対応 - 正確な保険料率で実領額を計算
+                令和8年対応・紙の税額表に合わせて手取り額を確認
               </p>
             </div>
             <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
@@ -85,7 +93,7 @@ function App() {
                     : 'text-gray-500 hover:text-gray-800'
                 }`}
               >
-                批量計算
+                複数人計算
               </button>
             </div>
           </div>
@@ -116,9 +124,18 @@ function App() {
                   input={lastInput}
                   bonusResult={bonusResult}
                   bonusInput={bonusInput}
+                  overrides={salaryOverrides}
+                  onChangeOverrides={setSalaryOverrides}
+                  bonusOverrides={bonusOverrides}
                 />
               )}
-              {bonusResult && <BonusResult result={bonusResult} />}
+              {bonusResult && (
+                <BonusResult
+                  result={bonusResult}
+                  overrides={bonusOverrides}
+                  onChangeOverrides={setBonusOverrides}
+                />
+              )}
               {!result && !loading && (
                 <div className="bg-white rounded-lg shadow-sm p-8 text-center text-gray-500">
                   左側のフォームに入力して「計算する」をクリックしてください
@@ -137,7 +154,7 @@ function App() {
 
         <footer className="mt-12 pt-8 border-t text-center text-sm text-gray-600">
           <p>
-            ※ 本ツールは参考値です。実際の給与計算は企業・自治体の通知書をご確認ください。
+            ※ 本ツールは社内確認用です。実際の給与計算では会社の決定等級・自治体の通知書をご確認ください。
           </p>
           <p className="mt-2">
             データソース: 協会けんぽ、日本年金機構、厚生労働省

@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { SalaryInput, SalaryCalculationResult, BonusInput, BonusCalculationResult } from '../types';
 import BonusPayslipBody from './BonusPayslipBody';
+import { formatYen, mergedSalaryDeductions, type DeductionOverrides } from '../format';
 
 interface Props {
   result: SalaryCalculationResult;
@@ -19,6 +20,9 @@ interface Props {
   bonusResult?: BonusCalculationResult;
   bonusInput?: BonusInput;
   defaultBonusPaymentDate?: string;
+  // 健保・介護・子育て支援金の手動調整（表の原生小数値が既定。画面と同じ値を印刷する）
+  overrides?: DeductionOverrides;
+  bonusOverrides?: DeductionOverrides;
 }
 
 const TEAL = '#4db6ac';
@@ -66,6 +70,8 @@ export default function Payslip({
   bonusResult,
   bonusInput,
   defaultBonusPaymentDate,
+  overrides = {},
+  bonusOverrides = {},
 }: Props) {
   const [companyName, setCompanyName] = useState(defaultCompanyName || '株式会社サンプル');
   const [employeeName, setEmployeeName] = useState(defaultEmployeeName || '山田 太郎');
@@ -92,7 +98,10 @@ export default function Payslip({
     ? (input.totalWorkHours || 0) + ot.regular + ot.holiday + ot.night
     : scheduledHours - absenceDays * 8 + ot.regular + ot.holiday + ot.night;
 
-  const d = result.deductions;
+  // 手動調整を反映した控除額・合計・手取（画面表示と同じ値を印刷する）
+  const d = mergedSalaryDeductions(result, overrides);
+  const netAmount = d.netSalary;
+  const fmt = formatYen;
 
   // 印刷/PDF保存: ブラウザは document.title を既定ファイル名に使うため、
   // 「会社名-氏名-YYYY年MM月給与明細」に一時的に差し替え、印刷後に元へ戻す。
@@ -153,15 +162,15 @@ export default function Payslip({
 
   const kojoRows: Cell[][] = [
     [
-      ['雇用保険', d.unemployment.toLocaleString()],
-      ['健康保険', d.healthInsurance.toLocaleString()],
-      ['介護保険', d.nursingCare.toLocaleString()],
-      ['厚生年金', d.employeePension.toLocaleString()],
-      ['子育て支援金', d.childSupport.toLocaleString()],
-      ['所得税', d.incomeTax.toLocaleString()],
+      ['雇用保険', fmt(d.unemployment)],
+      ['健康保険', fmt(d.healthInsurance)],
+      ['介護保険', fmt(d.nursingCare)],
+      ['厚生年金', fmt(d.employeePension)],
+      ['子育て支援金', fmt(d.childSupport)],
+      ['所得税', fmt(d.incomeTax)],
     ],
     [
-      ['住民税', (d.residentTax || 0) > 0 ? d.residentTax.toLocaleString() : '—'],
+      ['住民税', (d.residentTax || 0) > 0 ? fmt(d.residentTax) : '—'],
       null,
       null,
       null,
@@ -315,7 +324,7 @@ export default function Payslip({
             </p>
             <div className="text-right border-b-2 pb-1" style={{ borderColor: TEAL }}>
               <span className="text-lg font-bold mr-8">差引支給額</span>
-              <span className="text-2xl font-bold">¥{result.netSalary.toLocaleString()}</span>
+              <span className="text-2xl font-bold">¥{fmt(netAmount)}</span>
             </div>
           </div>
 
@@ -349,16 +358,16 @@ export default function Payslip({
                   {result.grossSalary.toLocaleString()}
                 </td>
                 <td className="border px-2 py-2 text-center text-sm bg-white" style={{ borderColor: '#b2dfdb' }}>
-                  {d.total.toLocaleString()}
+                  {fmt(d.total)}
                 </td>
                 <td className="border px-2 py-2 text-center text-sm bg-white font-bold" style={{ borderColor: '#b2dfdb' }}>
-                  {result.netSalary.toLocaleString()}
+                  {fmt(netAmount)}
                 </td>
               </tr>
             </tbody>
           </table>
 
-          <p className="mt-4 text-xs text-gray-400 print:hidden">
+          <p className="mt-4 text-xs text-gray-600 print:hidden">
             {(d.residentTax || 0) > 0
               ? '※ 住民税は決定通知書の月割額（入力値）です。本明細は計算ツールによる参考値です。'
               : '※ 住民税は決定通知書の月割額を入力した場合のみ控除されます。本明細は計算ツールによる参考値です。'}
@@ -375,6 +384,7 @@ export default function Payslip({
               employeeName={employeeName}
               employeeNo={employeeNo}
               paymentDate={bonusPaymentDate}
+              overrides={bonusOverrides}
             />
           </div>
         )}

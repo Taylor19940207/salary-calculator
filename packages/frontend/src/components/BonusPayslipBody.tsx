@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
 import type { BonusInput, BonusCalculationResult } from '../types';
+import { formatYen, mergedBonusDeductions, type DeductionOverrides } from '../format';
 
 interface Props {
   result: BonusCalculationResult;
@@ -8,6 +9,7 @@ interface Props {
   employeeName: string;
   employeeNo: string;
   paymentDate: string; // 賞与支給日（YYYY-MM-DD）
+  overrides?: DeductionOverrides; // 健保・介護・子育ての手動調整（表の原生小数値が既定）
 }
 
 const TEAL = '#4db6ac';
@@ -29,9 +31,13 @@ export default function BonusPayslipBody({
   employeeName,
   employeeNo,
   paymentDate,
+  overrides = {},
 }: Props) {
   const [y, m] = input.salaryMonth.split('-').map(Number);
-  const d = result.deductions;
+  // 手動調整を反映した控除額・合計・手取（画面表示と同じ値を印刷する）
+  const d = mergedBonusDeductions(result, overrides);
+  const netAmount = d.netBonus;
+  const fmt = formatYen;
 
   const shikyuRows: Cell[][] = [
     [
@@ -43,14 +49,14 @@ export default function BonusPayslipBody({
   ];
   const kojoRows: Cell[][] = [
     [
-      ['健康保険', d.healthInsurance.toLocaleString()],
-      ['介護保険', d.nursingCare.toLocaleString()],
-      ['厚生年金', d.employeePension.toLocaleString()],
-      ['雇用保険', d.unemployment.toLocaleString()],
+      ['健康保険', fmt(d.healthInsurance)],
+      ['介護保険', fmt(d.nursingCare)],
+      ['厚生年金', fmt(d.employeePension)],
+      ['雇用保険', fmt(d.unemployment)],
     ],
     [
-      ['子育て支援金', d.childSupport.toLocaleString()],
-      ['所得税', d.incomeTax.toLocaleString()],
+      ['子育て支援金', fmt(d.childSupport)],
+      ['所得税', fmt(d.incomeTax)],
       null,
       null,
     ],
@@ -115,7 +121,7 @@ export default function BonusPayslipBody({
         </p>
         <div className="text-right border-b-2 pb-1" style={{ borderColor: TEAL }}>
           <span className="text-lg font-bold mr-8">差引支給額</span>
-          <span className="text-2xl font-bold">¥{result.netBonus.toLocaleString()}</span>
+          <span className="text-2xl font-bold">¥{fmt(netAmount)}</span>
         </div>
       </div>
 
@@ -144,16 +150,16 @@ export default function BonusPayslipBody({
               {result.bonusAmount.toLocaleString()}
             </td>
             <td className="border px-2 py-2 text-center text-sm bg-white" style={{ borderColor: '#b2dfdb' }}>
-              {d.total.toLocaleString()}
+              {fmt(d.total)}
             </td>
             <td className="border px-2 py-2 text-center text-sm bg-white font-bold" style={{ borderColor: '#b2dfdb' }}>
-              {result.netBonus.toLocaleString()}
+              {fmt(netAmount)}
             </td>
           </tr>
         </tbody>
       </table>
 
-      <p className="mt-4 text-xs text-gray-400 print:hidden">
+      <p className="mt-4 text-xs text-gray-600 print:hidden">
         ※ 所得税は{result.taxMethod}で計算。住民税は賞与から徴収されません。本明細は計算ツールによる参考値です。
       </p>
     </div>
