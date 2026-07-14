@@ -21,6 +21,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
   const [age, setAge] = useState('35');
   const [dependents, setDependents] = useState('0');
   const [enrollInInsurance, setEnrollInInsurance] = useState(true);
+  const [enrollInUnemploymentInsurance, setEnrollInUnemploymentInsurance] = useState(true);
   const [showOvertime, setShowOvertime] = useState(false);
   const [overtimeRegular, setOvertimeRegular] = useState('0');
   const [overtimeHoliday, setOvertimeHoliday] = useState('0');
@@ -59,6 +60,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
       age: Number(age),
       dependents: Number(dependents),
       enrollInInsurance,
+      enrollInUnemploymentInsurance,
       manualGrade: manualGrade ? Number(manualGrade) : undefined,
       residentTax: Number(residentTax) > 0 ? Number(residentTax) : undefined,
     };
@@ -84,6 +86,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
         age: Number(age),
         dependents: Number(dependents),
         enrollInInsurance,
+        enrollInUnemploymentInsurance,
         priorFiscalBonusTotal: Number(priorFiscalBonusTotal) || undefined,
         bonusCalcMonths: Number(bonusCalcMonths) || undefined,
       };
@@ -308,9 +311,25 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
               健康保険・介護保険・厚生年金に加入する
             </span>
             <span className="block text-xs text-gray-500 mt-1">
-              正社員や週30h以上の勤務者は原則加入。雇用保険は週20h以上で自動判定。介護保険は40〜64歳のみ。
+              正社員や週30h以上の勤務者は原則加入。介護保険は40〜64歳のみ。雇用保険は下の欄で別途指定します。
             </span>
           </label>
+        </div>
+
+        {/* 雇用保険（社会保険とは別制度のため独立して指定） */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">雇用保険</label>
+          <select
+            value={enrollInUnemploymentInsurance ? 'general' : 'none'}
+            onChange={(e) => setEnrollInUnemploymentInsurance(e.target.value === 'general')}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+          >
+            <option value="general">一般被保険者（加入）</option>
+            <option value="none">未加入（法人代表・役員など）</option>
+          </select>
+          <p className="mt-1 text-xs text-gray-400">
+            法人代表・役員は「労働者」に該当しないため雇用保険には加入できません（社会保険には加入可）。週20h以上勤務の一般従業員は通常「一般被保険者」を選択してください。
+          </p>
         </div>
 
         {/* 社保等級（標準報酬月額）の指定 */}

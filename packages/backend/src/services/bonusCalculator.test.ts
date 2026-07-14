@@ -69,29 +69,64 @@ describe('calculateBonus', () => {
   });
 
   // 逐円一致の要: 浮動小数点で1円ずれないこと（回帰テスト）
+  // 社保・雇用保険とも未加入にして bonusAfterInsurance = bonus（社保控除ゼロ）の条件で検証する
   it('所得税の丸め: 1,000,000×4.084% = 40,840（39ではない）', async () => {
     const r = await calculateBonus(
-      input({ enrollInInsurance: false, dependents: 0, prevMonthAfterInsurance: 100000, bonusAmount: 1000000 })
+      input({
+        enrollInInsurance: false,
+        enrollInUnemploymentInsurance: false,
+        dependents: 0,
+        prevMonthAfterInsurance: 100000,
+        bonusAmount: 1000000,
+      })
     );
     expect(r.taxMethod).toBe('算出率 4.084%');
     expect(r.deductions.incomeTax).toBe(40840);
   });
 
   it('所得税の丸め: 未加入 500,000×2.042% = 10,210', async () => {
-    const r = await calculateBonus(input({ enrollInInsurance: false, bonusAmount: 500000 }));
+    const r = await calculateBonus(
+      input({ enrollInInsurance: false, enrollInUnemploymentInsurance: false, bonusAmount: 500000 })
+    );
     expect(r.deductions.healthInsurance).toBe(0);
+    expect(r.deductions.unemployment).toBe(0);
     expect(r.deductions.incomeTax).toBe(10210);
   });
 
   it('特例: 賞与が前月給与の10倍ちょうどは算出率、10倍超で月額表', async () => {
     const eq = await calculateBonus(
-      input({ enrollInInsurance: false, dependents: 0, prevMonthAfterInsurance: 100000, bonusAmount: 1000000 })
+      input({
+        enrollInInsurance: false,
+        enrollInUnemploymentInsurance: false,
+        dependents: 0,
+        prevMonthAfterInsurance: 100000,
+        bonusAmount: 1000000,
+      })
     );
     expect(eq.taxMethod).toBe('算出率 4.084%');
     const over = await calculateBonus(
-      input({ enrollInInsurance: false, dependents: 0, prevMonthAfterInsurance: 100000, bonusAmount: 1000001 })
+      input({
+        enrollInInsurance: false,
+        enrollInUnemploymentInsurance: false,
+        dependents: 0,
+        prevMonthAfterInsurance: 100000,
+        bonusAmount: 1000001,
+      })
     );
     expect(over.taxMethod.startsWith('特例')).toBe(true);
+  });
+
+  it('雇用保険は社保未加入でも独立して課税基礎に反映される（enrollInUnemploymentInsurance未指定=加入）', async () => {
+    const withUI = await calculateBonus(
+      input({ enrollInInsurance: false, enrollInUnemploymentInsurance: true, dependents: 0, prevMonthAfterInsurance: 100000, bonusAmount: 1000000 })
+    );
+    const withoutUI = await calculateBonus(
+      input({ enrollInInsurance: false, enrollInUnemploymentInsurance: false, dependents: 0, prevMonthAfterInsurance: 100000, bonusAmount: 1000000 })
+    );
+    expect(withUI.deductions.unemployment).toBeGreaterThan(0);
+    expect(withoutUI.deductions.unemployment).toBe(0);
+    // 雇用保険料が引かれる分、withUI の課税対象(bonusAfterInsurance)が減り、所得税も減る
+    expect(withUI.deductions.incomeTax).toBeLessThan(withoutUI.deductions.incomeTax);
   });
 
   it('特例: 前月給与なし（0）は月額表で計算', async () => {

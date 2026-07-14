@@ -33,8 +33,12 @@ export interface SalaryInput {
   age: number;
   dependents: number;
 
-  // 社会保険加入
+  // 社会保険（健康保険・介護保険・厚生年金）加入
   enrollInInsurance: boolean;
+  // 雇用保険加入。社会保険とは別制度のため独立して管理する
+  // （例: 法人代表・役員は社会保険には加入するが雇用保険には加入できない）。
+  // 省略時は true（一般被保険者）とみなす
+  enrollInUnemploymentInsurance?: boolean;
 
   // 加班・欠勤（オプション）
   overtime?: {
@@ -92,6 +96,7 @@ export interface BonusInput {
   age: number;
   dependents: number;
   enrollInInsurance: boolean;
+  enrollInUnemploymentInsurance?: boolean; // 雇用保険加入。false=未加入（法人代表・役員等）。省略時は加入扱い
   priorFiscalBonusTotal?: number;      // 当年度(4/1〜3/31)に既に支払った標準賞与額の累計（健保573万上限判定用、既定0）
   bonusCalcMonths?: number;            // 賞与計算期間の月数（特例時の除数。6を超えると12、既定6）
 }

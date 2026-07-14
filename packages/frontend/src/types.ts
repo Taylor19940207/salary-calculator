@@ -36,6 +36,7 @@ export interface SalaryInput {
   scheduledMonthlyHours?: number; // 月所定労働時間（省略時160h）
   manualGrade?: number;           // 社保等級の手動指定（1〜50、省略時は自動判定）
   residentTax?: number;           // 住民税（特別徴収・月額）。決定通知書の月割額をそのまま控除
+  enrollInUnemploymentInsurance?: boolean; // 雇用保険加入。false=未加入（法人代表・役員等）、省略時は加入扱い
 }
 
 export interface GradeInfo {
@@ -89,6 +90,7 @@ export interface BonusInput {
   age: number;
   dependents: number;
   enrollInInsurance: boolean;
+  enrollInUnemploymentInsurance?: boolean; // 雇用保険加入。false=未加入（法人代表・役員等）
   priorFiscalBonusTotal?: number;      // 当年度(4/1〜3/31)の既払標準賞与額累計（健保573万上限判定用）
   bonusCalcMonths?: number;            // 賞与計算期間の月数（特例時の除数。6超で12、既定6）
 }

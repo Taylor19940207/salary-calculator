@@ -291,6 +291,13 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
       calculation: `基数 ¥${standardMonthlyRemuneration.toLocaleString()} × ${insuranceRates.childSupport.employee}%（総料率 ${insuranceRates.childSupport.total}% の労使折半）`,
     });
 
+  }
+
+  // 雇用保険は社会保険（健保・介護・厚年）とは別制度のため、enrollInInsurance とは独立して判定する。
+  // 法人代表・役員は「労働者」に該当しないため、社会保険に加入していても雇用保険には加入できない。
+  // 省略時は一般被保険者（加入）として扱う。
+  const enrollInUnemploymentInsurance = input.enrollInUnemploymentInsurance !== false;
+  if (enrollInUnemploymentInsurance) {
     // 雇用保険（被保険者負担分も50銭以下切捨て・50銭超切上げ）
     // 出張旅費は実費弁償のため賃金に含めない
     const wageForUnemployment = grossSalary - businessTripAllowance;
@@ -302,6 +309,12 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
       amount: deductions.unemployment,
       calculation: `賃金総額 ¥${wageForUnemployment.toLocaleString()} × ${insuranceRates.unemployment.employee}%（総料率 ${insuranceRates.unemployment.total}%、事業主負担 ${Math.round((insuranceRates.unemployment.total - insuranceRates.unemployment.employee) * 1000) / 1000}%）`,
       sourceUrl: insuranceRates.sourceUrls.unemployment,
+    });
+  } else {
+    breakdown.deductions.push({
+      label: '雇用保険',
+      amount: 0,
+      calculation: '未加入（法人代表・役員など、雇用保険の被保険者に該当しないため）',
     });
   }
 

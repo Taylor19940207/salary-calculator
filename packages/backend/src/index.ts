@@ -113,6 +113,7 @@ const SalaryInputSchema = z.object({
   age: z.number().min(15).max(100),
   dependents: z.number().min(0).default(0),
   enrollInInsurance: z.boolean().default(true),
+  enrollInUnemploymentInsurance: z.boolean().default(true), // 雇用保険加入（社会保険とは別判定。false=法人代表・役員等）
   overtime: z.object({
     regular: z.number().default(0),
     holiday: z.number().default(0),
@@ -158,6 +159,7 @@ const BonusInputSchema = z.object({
   age: z.number().min(15).max(100),
   dependents: z.number().min(0).default(0),
   enrollInInsurance: z.boolean().default(true),
+  enrollInUnemploymentInsurance: z.boolean().default(true), // 雇用保険加入（社会保険とは別判定）
   priorFiscalBonusTotal: z.number().min(0).optional(),
   bonusCalcMonths: z.number().int().min(1).max(12).optional(),
 });

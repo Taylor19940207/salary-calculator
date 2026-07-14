@@ -119,6 +119,12 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
       calculation: `標準賞与額 ¥${healthStandardBonus.toLocaleString()} × ${ratesUsed.childSupport.employee}%（総料率 ${ratesUsed.childSupport.total}% の労使折半）`,
     });
 
+  }
+
+  // 雇用保険は社会保険（健保・介護・厚年）とは別制度のため、enrollInInsurance とは独立して判定する。
+  // 法人代表・役員は社会保険に加入していても雇用保険には加入できない。省略時は一般被保険者として扱う。
+  const enrollInUnemploymentInsurance = input.enrollInUnemploymentInsurance !== false;
+  if (enrollInUnemploymentInsurance) {
     // 雇用保険は標準賞与額ではなく賞与の実支給額に料率を掛ける
     deductions.unemployment = roundEmployeeBurden(bonus * (ratesUsed.unemployment.employee / 100));
     breakdown.deductions.push({
@@ -126,6 +132,12 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
       amount: deductions.unemployment,
       calculation: `賞与総額 ¥${bonus.toLocaleString()} × ${ratesUsed.unemployment.employee}%（総料率 ${ratesUsed.unemployment.total}%）`,
       sourceUrl: ratesUsed.sourceUrls.unemployment,
+    });
+  } else {
+    breakdown.deductions.push({
+      label: '雇用保険',
+      amount: 0,
+      calculation: '未加入（法人代表・役員など、雇用保険の被保険者に該当しないため）',
     });
   }
 

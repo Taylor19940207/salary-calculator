@@ -23,6 +23,7 @@ const BatchCalculateSchema = z.object({
     age: z.number().min(15).max(100),
     dependents: z.number().min(0).default(0),
     enrollInInsurance: z.boolean().default(true),
+    enrollInUnemploymentInsurance: z.boolean().default(true), // 雇用保険加入（社会保険とは別判定）
     overtime: z.object({
       regular: z.number().default(0),
       holiday: z.number().default(0),
@@ -70,6 +71,7 @@ router.post('/calculate/batch', async (req, res) => {
           age: employee.age,
           dependents: employee.dependents,
           enrollInInsurance: employee.enrollInInsurance,
+          enrollInUnemploymentInsurance: employee.enrollInUnemploymentInsurance,
           overtime: employee.overtime,
           absenceDays: employee.absenceDays,
           scheduledMonthlyHours: employee.scheduledMonthlyHours,
@@ -213,6 +215,12 @@ router.post('/calculate/import-csv', async (req, res) => {
           case 'enrollininsurance':
           case '社会保険':
             employee.enrollInInsurance = value === 'true' || value === '1' || value === 'はい';
+            break;
+          case 'enrollinunemploymentinsurance':
+          case '雇用保険':
+            // 「未加入」「false」「0」「いいえ」以外は加入扱い（既定は一般被保険者）
+            employee.enrollInUnemploymentInsurance =
+              !(value === 'false' || value === '0' || value === 'いいえ' || value === '未加入');
             break;
         }
       });

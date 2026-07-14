@@ -17,6 +17,7 @@ export interface EmployeeDraft {
   age: string;
   dependents: string;
   enrollInInsurance: boolean;
+  enrollInUnemploymentInsurance: boolean; // 雇用保険加入。false=未加入（法人代表・役員等）
   manualGrade: string; // '' = 自動判定
   residentTax: string; // 住民税（特別徴収・月額）。'' = 控除なし
   showOvertime: boolean;
@@ -49,6 +50,7 @@ export function createEmptyDraft(index: number): EmployeeDraft {
     age: '35',
     dependents: '0',
     enrollInInsurance: true,
+    enrollInUnemploymentInsurance: true,
     manualGrade: '',
     residentTax: '',
     showOvertime: false,
@@ -76,6 +78,7 @@ export function draftToBonusInput(d: EmployeeDraft): BonusInput {
     age: Number(d.age),
     dependents: Number(d.dependents),
     enrollInInsurance: d.enrollInInsurance,
+    enrollInUnemploymentInsurance: d.enrollInUnemploymentInsurance,
     priorFiscalBonusTotal: Number(d.priorFiscalBonusTotal) || undefined,
     bonusCalcMonths: Number(d.bonusCalcMonths) || undefined,
   };
@@ -98,6 +101,7 @@ export function draftToInput(d: EmployeeDraft): SalaryInput & { id: string; name
     age: Number(d.age),
     dependents: Number(d.dependents),
     enrollInInsurance: d.enrollInInsurance,
+    enrollInUnemploymentInsurance: d.enrollInUnemploymentInsurance,
     manualGrade: d.manualGrade ? Number(d.manualGrade) : undefined,
     residentTax: Number(d.residentTax) > 0 ? Number(d.residentTax) : undefined,
   };
@@ -329,9 +333,25 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
             健康保険・介護保険・厚生年金に加入する
           </span>
           <span className="block text-xs text-gray-500 mt-1">
-            正社員や週30h以上の勤務者は原則加入。雇用保険は週20h以上で自動判定。介護保険は40〜64歳のみ。
+            正社員や週30h以上の勤務者は原則加入。介護保険は40〜64歳のみ。雇用保険は下の欄で別途指定します。
           </span>
         </label>
+      </div>
+
+      {/* 雇用保険（社会保険とは別制度のため独立して指定） */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">雇用保険</label>
+        <select
+          value={d.enrollInUnemploymentInsurance ? 'general' : 'none'}
+          onChange={(e) => onChange({ enrollInUnemploymentInsurance: e.target.value === 'general' })}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+        >
+          <option value="general">一般被保険者（加入）</option>
+          <option value="none">未加入（法人代表・役員など）</option>
+        </select>
+        <p className="mt-1 text-xs text-gray-400">
+          法人代表・役員は雇用保険に加入できません（社会保険には加入可）。一般従業員は通常「一般被保険者」を選択してください。
+        </p>
       </div>
 
       {/* 社保等級（標準報酬月額）の指定 */}
