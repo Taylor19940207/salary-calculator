@@ -161,7 +161,7 @@ export default function Payslip({
       ['所得税', d.incomeTax.toLocaleString()],
     ],
     [
-      ['住民税', '—'],
+      ['住民税', (d.residentTax || 0) > 0 ? d.residentTax.toLocaleString() : '—'],
       null,
       null,
       null,
@@ -358,7 +358,9 @@ export default function Payslip({
           </table>
 
           <p className="mt-4 text-xs text-gray-400 print:hidden">
-            ※ 住民税は市区町村ごとに異なるため含まれていません。本明細は計算ツールによる参考値です。
+            {(d.residentTax || 0) > 0
+              ? '※ 住民税は決定通知書の月割額（入力値）です。本明細は計算ツールによる参考値です。'
+              : '※ 住民税は決定通知書の月割額を入力した場合のみ控除されます。本明細は計算ツールによる参考値です。'}
           </p>
         </div>
 

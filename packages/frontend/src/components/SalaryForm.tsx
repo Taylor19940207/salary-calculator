@@ -29,6 +29,8 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
   const [scheduledMonthlyHours, setScheduledMonthlyHours] = useState('160');
   const [manualGrade, setManualGrade] = useState(''); // '' = 自動判定
   const [grades, setGrades] = useState<GradeInfo[]>([]);
+  // 住民税（特別徴収・月額）: 決定通知書の月割額を転記する。空欄=控除なし
+  const [residentTax, setResidentTax] = useState('');
   // 賞与（今月支給があれば ON。給与とは別計算だが基本情報は共通で使う）
   const [hasBonus, setHasBonus] = useState(false);
   // 賞与額・前月給与はダミー既定値を置かない（消し忘れ＝税率誤りに直結するため、意識的に入力させる）
@@ -58,6 +60,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
       dependents: Number(dependents),
       enrollInInsurance,
       manualGrade: manualGrade ? Number(manualGrade) : undefined,
+      residentTax: Number(residentTax) > 0 ? Number(residentTax) : undefined,
     };
 
     if (showOvertime) {
@@ -333,6 +336,29 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
             </p>
           </div>
         )}
+
+        {/* 住民税（特別徴収） */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              住民税（特別徴収・月額）
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                value={residentTax}
+                onChange={(e) => setResidentTax(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                min="0"
+                placeholder="0"
+              />
+              <span className="absolute right-4 top-2.5 text-gray-500">円</span>
+            </div>
+            <p className="mt-1 text-xs text-gray-400">
+              市区町村の特別徴収税額決定通知書の月割額を入力（6月分は端数調整で他月と異なる場合あり）。入社1年目など前年所得なしは空欄
+            </p>
+          </div>
+        </div>
 
         {/* 残業・欠勤（展開可能） */}
         <div>

@@ -31,6 +31,7 @@ const BatchCalculateSchema = z.object({
     absenceDays: z.number().optional(),
     scheduledMonthlyHours: z.number().min(1).max(250).optional(),
     manualGrade: z.number().int().min(1).max(50).optional(),
+    residentTax: z.number().min(0).optional(), // 住民税（特別徴収・月額）
   })).min(1).max(100) // 最多一次處理 100 人
 });
 
@@ -73,6 +74,7 @@ router.post('/calculate/batch', async (req, res) => {
           absenceDays: employee.absenceDays,
           scheduledMonthlyHours: employee.scheduledMonthlyHours,
           manualGrade: employee.manualGrade,
+          residentTax: employee.residentTax,
         };
 
         const result = await calculateSalary(input);
@@ -184,6 +186,10 @@ router.post('/calculate/import-csv', async (req, res) => {
           case '業績給':
             employee.performancePay = parseFloat(value) || undefined;
             break;
+          case 'residenttax':
+          case '住民税':
+            employee.residentTax = parseFloat(value) || undefined;
+            break;
           case 'otherallowances':
           case 'その他手当':
             employee.otherAllowances = parseFloat(value) || 0;
@@ -273,6 +279,7 @@ router.post('/calculate/export-csv', async (req, res) => {
       '雇用保険',
       '子育支援金',
       '所得税',
+      '住民税',
       '控除合計',
       '手取額',
     ].join(',');
@@ -280,7 +287,7 @@ router.post('/calculate/export-csv', async (req, res) => {
     // 生成 CSV 內容
     const rows = results.map((r: BatchCalculationResult) => {
       if (r.error) {
-        return `${r.id || ''},${r.name || ''},ERROR,,,,,,,,"${r.error}"`;
+        return `${r.id || ''},${r.name || ''},ERROR,,,,,,,,,"${r.error}"`;
       }
 
       return [
@@ -293,6 +300,7 @@ router.post('/calculate/export-csv', async (req, res) => {
         r.result.deductions.unemployment,
         r.result.deductions.childSupport,
         r.result.deductions.incomeTax,
+        r.result.deductions.residentTax ?? 0,
         r.result.deductions.total,
         r.result.netSalary,
       ].join(',');

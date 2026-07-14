@@ -35,6 +35,7 @@ export interface SalaryInput {
   absenceDays?: number;
   scheduledMonthlyHours?: number; // 月所定労働時間（省略時160h）
   manualGrade?: number;           // 社保等級の手動指定（1〜50、省略時は自動判定）
+  residentTax?: number;           // 住民税（特別徴収・月額）。決定通知書の月割額をそのまま控除
 }
 
 export interface GradeInfo {
@@ -59,6 +60,7 @@ export interface SalaryCalculationResult {
     unemployment: number;
     childSupport: number;
     incomeTax: number;
+    residentTax: number; // 住民税（特別徴収・入力された月割額の転記）
     total: number;
   };
   netSalary: number;

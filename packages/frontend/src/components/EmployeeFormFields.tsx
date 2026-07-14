@@ -18,6 +18,7 @@ export interface EmployeeDraft {
   dependents: string;
   enrollInInsurance: boolean;
   manualGrade: string; // '' = 自動判定
+  residentTax: string; // 住民税（特別徴収・月額）。'' = 控除なし
   showOvertime: boolean;
   overtimeRegular: string;
   overtimeHoliday: string;
@@ -49,6 +50,7 @@ export function createEmptyDraft(index: number): EmployeeDraft {
     dependents: '0',
     enrollInInsurance: true,
     manualGrade: '',
+    residentTax: '',
     showOvertime: false,
     overtimeRegular: '0',
     overtimeHoliday: '0',
@@ -97,6 +99,7 @@ export function draftToInput(d: EmployeeDraft): SalaryInput & { id: string; name
     dependents: Number(d.dependents),
     enrollInInsurance: d.enrollInInsurance,
     manualGrade: d.manualGrade ? Number(d.manualGrade) : undefined,
+    residentTax: Number(d.residentTax) > 0 ? Number(d.residentTax) : undefined,
   };
 
   if (d.showOvertime) {
@@ -355,6 +358,27 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
           </p>
         </div>
       )}
+
+      {/* 住民税（特別徴収） */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">住民税（特別徴収・月額）</label>
+          <div className="relative">
+            <input
+              type="number"
+              value={d.residentTax}
+              onChange={(e) => onChange({ residentTax: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              min="0"
+              placeholder="0"
+            />
+            <span className="absolute right-4 top-2.5 text-gray-500">円</span>
+          </div>
+          <p className="mt-1 text-xs text-gray-400">
+            決定通知書の月割額を入力（6月分は端数調整あり）。前年所得なしは空欄
+          </p>
+        </div>
+      </div>
 
       {/* 残業・欠勤（展開可能） */}
       <div>

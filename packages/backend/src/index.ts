@@ -121,6 +121,7 @@ const SalaryInputSchema = z.object({
   absenceDays: z.number().optional(),
   scheduledMonthlyHours: z.number().min(1).max(250).optional(), // 月所定労働時間（省略時160h）
   manualGrade: z.number().int().min(1).max(50).optional(),      // 社保等級の手動指定
+  residentTax: z.number().min(0).optional(),                    // 住民税（特別徴収・月額、決定通知書の転記）
 });
 
 app.post('/api/calculate', async (req, res) => {

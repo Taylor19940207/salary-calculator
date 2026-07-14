@@ -234,6 +234,7 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
     unemployment: 0,
     childSupport: 0,
     incomeTax: 0,
+    residentTax: 0,
     total: 0,
   };
 
@@ -317,6 +318,17 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
     amount: deductions.incomeTax,
     calculation: `課税対象額¥${taxableIncome.toLocaleString()}（非課税手当¥${nonTaxable.toLocaleString()}控除後）、扶養${input.dependents}人、令和8年分月額表甲欄`,
   });
+
+  // 5-2. 住民税（特別徴収）: 前年所得に基づき市区町村が決定した月割額をそのまま控除する。
+  // 計算はしない（決定通知書の転記）。当月の所得税・社会保険料には一切影響しない。
+  deductions.residentTax = Math.max(0, Math.floor(input.residentTax || 0));
+  if (deductions.residentTax > 0) {
+    breakdown.deductions.push({
+      label: '住民税（特別徴収）',
+      amount: deductions.residentTax,
+      calculation: '市区町村の特別徴収税額決定通知書による月割額（前年所得に基づく決定額の転記）',
+    });
+  }
 
   // 総控除額
   deductions.total = Object.values(deductions).reduce((sum, val) => sum + val, 0) - deductions.total;
