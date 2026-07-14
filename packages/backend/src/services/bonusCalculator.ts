@@ -186,17 +186,34 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
 
   // 所得税は法定丸め後の社保額（socialTotal）を基準に計算する唯一の値
   // （月給と同じ理由で、raw版でも同じ値を使う。所得税自体は端数処理の対象外＝1円未満切捨てのみ）
-  if (prev <= 0 || bonusAfterInsurance > prev * 10) {
-    // 特例: 月額表甲欄を使い、賞与(社保控除後)÷月数 の税額を月数倍する
+  // 特例は2種類あり計算式が異なる（国税庁タックスアンサーNo.2523・所得税法186条）:
+  //   ①前月給与なし: (賞与−社保)÷N を月額表にあて ×N
+  //   ②賞与(社保控除後)が前月給与(社保控除後)の10倍超:
+  //     ((賞与−社保)÷N ＋ 前月給与) の月額表税額 − 前月給与の月額表税額、を ×N
+  //     （前月給与への上乗せ分として累進を正しく反映するため、①の式とは別物）
+  if (prev <= 0) {
+    // 特例①: 前月給与なし
     const base = bonusAfterInsurance / months;
     deductions.incomeTax = calculateIncomeTax(base, input.dependents) * months;
-    const reason = prev <= 0 ? '前月給与なし' : `賞与が前月給与の10倍超`;
-    taxMethod = `特例（${reason}・月額表÷${months}×${months}）`;
+    taxMethod = `特例（前月給与なし・月額表÷${months}×${months}）`;
     breakdown.deductions.push({
       label: '所得税（源泉徴収）',
       amount: deductions.incomeTax,
       rawAmount: deductions.incomeTax,
       calculation: `${taxMethod}: (¥${bonusAfterInsurance.toLocaleString()} ÷ ${months}) を月額表甲欄・扶養${input.dependents}人にあて ×${months}`,
+    });
+  } else if (bonusAfterInsurance > prev * 10) {
+    // 特例②: 10倍超 → 前月給与に上乗せして月額表で差分税額を求め、N倍する
+    const base = bonusAfterInsurance / months;
+    const taxOnSum = calculateIncomeTax(base + prev, input.dependents);
+    const taxOnPrev = calculateIncomeTax(prev, input.dependents);
+    deductions.incomeTax = (taxOnSum - taxOnPrev) * months;
+    taxMethod = `特例（賞与が前月給与の10倍超・月額表差額方式×${months}）`;
+    breakdown.deductions.push({
+      label: '所得税（源泉徴収）',
+      amount: deductions.incomeTax,
+      rawAmount: deductions.incomeTax,
+      calculation: `${taxMethod}: (¥${bonusAfterInsurance.toLocaleString()} ÷ ${months} ＋ 前月給与 ¥${prev.toLocaleString()}) の月額表税額 ¥${taxOnSum.toLocaleString()} − 前月給与の税額 ¥${taxOnPrev.toLocaleString()} を ×${months}`,
     });
   } else {
     taxRate = bonusTaxRate(input.dependents, prev);

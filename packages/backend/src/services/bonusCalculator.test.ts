@@ -114,6 +114,45 @@ describe('calculateBonus', () => {
       })
     );
     expect(over.taxMethod.startsWith('特例')).toBe(true);
+    // 10倍超の官式（タックスアンサーNo.2523）:
+    // (1,000,001÷6 ＋ 前月100,000) = 266,666 の月額表税額 6,750 − 前月の税額 0、を×6
+    // 単純な ÷6→月額表→×6（= 18,720）では累進が反映されず過少になる回帰テスト
+    expect(over.deductions.incomeTax).toBe(40500);
+  });
+
+  it('特例10倍超: 前月給与の税額が正しく差し引かれる（前月に税額があるケース）', async () => {
+    // 前月300,000（扶養0）→ 月額表税額あり。賞与3,000,001（>10倍・社保なし）
+    // (3,000,001÷6 ＋ 300,000) = 800,000 の税額 − 300,000 の税額、を×6
+    const { calculateIncomeTax } = await import('./salaryCalculator.js');
+    const r = await calculateBonus(
+      input({
+        enrollInInsurance: false,
+        enrollInUnemploymentInsurance: false,
+        dependents: 0,
+        prevMonthAfterInsurance: 300000,
+        bonusAmount: 3000001,
+      })
+    );
+    expect(r.taxMethod.startsWith('特例')).toBe(true);
+    const expected = (calculateIncomeTax(3000001 / 6 + 300000, 0) - calculateIncomeTax(300000, 0)) * 6;
+    expect(r.deductions.incomeTax).toBe(expected);
+    expect(calculateIncomeTax(300000, 0)).toBeGreaterThan(0); // 差し引き分が実際に非ゼロであること
+  });
+
+  it('特例10倍超: 計算期間6か月超は÷12・×12で同じ差額方式', async () => {
+    const { calculateIncomeTax } = await import('./salaryCalculator.js');
+    const r = await calculateBonus(
+      input({
+        enrollInInsurance: false,
+        enrollInUnemploymentInsurance: false,
+        dependents: 0,
+        prevMonthAfterInsurance: 100000,
+        bonusAmount: 3000001,
+        bonusCalcMonths: 12,
+      })
+    );
+    const expected = (calculateIncomeTax(3000001 / 12 + 100000, 0) - calculateIncomeTax(100000, 0)) * 12;
+    expect(r.deductions.incomeTax).toBe(expected);
   });
 
   it('雇用保険は社保未加入でも独立して課税基礎に反映される（enrollInUnemploymentInsurance未指定=加入）', async () => {
