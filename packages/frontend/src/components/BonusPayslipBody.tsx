@@ -99,7 +99,7 @@ export default function BonusPayslipBody({
   );
 
   return (
-    <div className="payslip-page p-8">
+    <div className="payslip-page p-8 min-w-[720px]">
       <h1 className="text-center text-2xl font-bold mb-6">
         {y}年{m}月分　賞与支払明細書
       </h1>

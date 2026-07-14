@@ -296,43 +296,49 @@ export default function BatchCalculator({ prefectures }: Props) {
             className="flex-1 max-w-md px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
           />
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
-          <label htmlFor="batch-payday" className="text-sm font-medium text-gray-700 whitespace-nowrap w-24">
-            支給日
-          </label>
-          <input
-            id="batch-payday"
-            type="date"
-            value={paymentDate}
-            onChange={(e) => setPaymentDate(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-          />
-          <label className="text-sm font-medium text-gray-700 whitespace-nowrap ml-2">
-            給与計算期間
-          </label>
-          <input
-            type="date"
-            value={periodStart}
-            onChange={(e) => setPeriodStart(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-          />
-          <span>〜</span>
-          <input
-            type="date"
-            value={periodEnd}
-            onChange={(e) => setPeriodEnd(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-          />
-          <label htmlFor="batch-bonus-payday" className="text-sm font-medium text-gray-700 whitespace-nowrap ml-2">
-            賞与支給日
-          </label>
-          <input
-            id="batch-bonus-payday"
-            type="date"
-            value={bonusPaymentDate}
-            onChange={(e) => setBonusPaymentDate(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-          />
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div className="flex items-center gap-3">
+            <label htmlFor="batch-payday" className="text-sm font-medium text-gray-700 whitespace-nowrap w-24 sm:w-auto">
+              支給日
+            </label>
+            <input
+              id="batch-payday"
+              type="date"
+              value={paymentDate}
+              onChange={(e) => setPaymentDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-sm font-medium text-gray-700 whitespace-nowrap w-24 sm:w-auto">
+              給与計算期間
+            </label>
+            <input
+              type="date"
+              value={periodStart}
+              onChange={(e) => setPeriodStart(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            />
+            <span>〜</span>
+            <input
+              type="date"
+              value={periodEnd}
+              onChange={(e) => setPeriodEnd(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <label htmlFor="batch-bonus-payday" className="text-sm font-medium text-gray-700 whitespace-nowrap w-24 sm:w-auto">
+              賞与支給日
+            </label>
+            <input
+              id="batch-bonus-payday"
+              type="date"
+              value={bonusPaymentDate}
+              onChange={(e) => setBonusPaymentDate(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            />
+          </div>
         </div>
         <p className="text-xs text-gray-400">会社名・支給日・給与計算期間・賞与支給日は全員の明細に共通で表示されます（期間は空欄なら給与月の前月1日〜末日）</p>
       </div>
@@ -343,9 +349,9 @@ export default function BatchCalculator({ prefectures }: Props) {
         </div>
       )}
 
-      {/* タブ列（横スクロール可能） */}
-      <div className="flex items-center gap-2 border-b border-gray-200">
-        <div className="flex-1 flex gap-1 overflow-x-auto pb-px">
+      {/* タブ列（横スクロール可能）。モバイルではボタンを下段に分離 */}
+      <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-2 border-b border-gray-200">
+        <div className="w-full sm:flex-1 flex gap-1 overflow-x-auto pb-px">
           {employees.map((emp, i) => (
             <button
               key={i}
@@ -372,18 +378,20 @@ export default function BatchCalculator({ prefectures }: Props) {
             </button>
           ))}
         </div>
-        <button
-          onClick={addEmployee}
-          className="shrink-0 px-4 py-2 text-sm font-semibold bg-teal-600 text-white rounded-lg shadow-sm hover:bg-teal-700 active:bg-teal-800 transition-colors"
-        >
-          ＋ 従業員を追加
-        </button>
-        <button
-          onClick={duplicateEmployee}
-          className="shrink-0 px-4 py-2 text-sm font-semibold bg-white border border-gray-300 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 active:bg-gray-100 transition-colors"
-        >
-          この従業員を複製
-        </button>
+        <div className="flex gap-2 sm:shrink-0">
+          <button
+            onClick={addEmployee}
+            className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold bg-teal-600 text-white rounded-lg shadow-sm hover:bg-teal-700 active:bg-teal-800 transition-colors whitespace-nowrap"
+          >
+            ＋ 従業員を追加
+          </button>
+          <button
+            onClick={duplicateEmployee}
+            className="flex-1 sm:flex-none px-4 py-2 text-sm font-semibold bg-white border border-gray-300 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 active:bg-gray-100 transition-colors whitespace-nowrap"
+          >
+            この従業員を複製
+          </button>
+        </div>
       </div>
 
       {/* アクティブな従業員のフォーム */}

@@ -214,7 +214,7 @@ export default function Payslip({
 
   return createPortal(
     <div className="payslip-overlay fixed inset-0 bg-black/50 z-50 overflow-y-auto">
-      <div className="max-w-4xl mx-auto my-8 bg-white rounded-lg shadow-xl print:shadow-none print:my-0 print:rounded-none">
+      <div className="max-w-4xl mx-auto my-4 sm:my-8 bg-white rounded-lg shadow-xl print:shadow-none print:my-0 print:rounded-none">
         {/* ツールバー（印刷時非表示）: 上段=編集欄（折り返し可）、下段=ボタン。
             同一行に詰めると賞与支給日まで入ったときにボタンが潰れるため分離 */}
         <div className="px-6 py-4 border-b print:hidden space-y-3">
@@ -296,8 +296,9 @@ export default function Payslip({
           </div>
         </div>
 
-        {/* 明細書本体（給与＝1枚目） */}
-        <div className="payslip-page p-8">
+        {/* 明細書本体（給与＝1枚目）。A4横レイアウトのため、モバイルでは横スクロールで閲覧する */}
+        <div className="payslip-scroll overflow-x-auto">
+        <div className="payslip-page p-8 min-w-[720px]">
           <h1 className="text-center text-2xl font-bold mb-6">
             {y}年{m}月分　給与支払明細書
           </h1>
@@ -377,6 +378,7 @@ export default function Payslip({
             />
           </div>
         )}
+        </div>
       </div>
     </div>,
     document.body

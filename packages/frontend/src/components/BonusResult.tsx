@@ -10,9 +10,9 @@ interface Props {
 export default function BonusResult({ result }: Props) {
   return (
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-      <div className="flex justify-between items-center px-5 py-4">
+      <div className="flex flex-wrap justify-between items-center gap-2 px-5 py-4">
         <h2 className="text-lg font-semibold text-gray-900">賞与 手取り額</h2>
-        <p className="text-3xl font-bold text-teal-600">¥{result.netBonus.toLocaleString()}</p>
+        <p className="text-2xl sm:text-3xl font-bold text-teal-600">¥{result.netBonus.toLocaleString()}</p>
       </div>
 
       <BonusResultDetail result={result} />

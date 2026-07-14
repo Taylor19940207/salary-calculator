@@ -47,6 +47,11 @@ input[type='number'] {
   /* 1 明細 = 1 ページ。賞与ありのときは給与(1枚目)＋賞与(2枚目)を1ファイルで出力 */
   .payslip-page {
     padding: 12mm !important;
+    min-width: 0 !important; /* 画面用の min-width（モバイル横スクロール）を印刷では無効化 */
+  }
+  /* モバイル閲覧用の横スクロールは印刷では解除 */
+  .payslip-scroll {
+    overflow: visible !important;
   }
   /* 2 枚目（賞与）は改ページしてから出す */
   .payslip-break {

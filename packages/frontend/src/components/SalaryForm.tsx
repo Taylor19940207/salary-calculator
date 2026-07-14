@@ -181,7 +181,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
         )}
 
         {/* 手当 */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               通勤手当（非課税）
@@ -213,7 +213,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
             <p className="mt-1 text-xs text-gray-400">実費弁償のため非課税・社会保険の基数にも不算入</p>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               その他手当
@@ -231,7 +231,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
         </div>
 
         {/* 給与年月・都道府県 */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               給与年月（料率の適用月）
@@ -264,7 +264,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
         </div>
 
         {/* 年齢・扶養人数 */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               年齢
@@ -338,7 +338,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
         )}
 
         {/* 住民税（特別徴収） */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               住民税（特別徴収・月額）
@@ -373,7 +373,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
           {showOvertime && (
             <div className="mt-4 space-y-4 pl-4 border-l-2 border-gray-200">
               {salaryType === 'monthly' && (
-                <div className="w-1/2">
+                <div className="w-full sm:w-1/2">
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     月所定労働時間
                   </label>
@@ -394,7 +394,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
                   </p>
                 </div>
               )}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     残業（×1.25）
@@ -445,7 +445,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
                 </div>
               </div>
               {salaryType === 'monthly' && (
-                <div className="w-1/3 pr-2">
+                <div className="w-full sm:w-1/3 sm:pr-2">
                   <label className="block text-xs font-medium text-gray-700 mb-1">
                     欠勤日数
                   </label>
@@ -488,7 +488,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
 
           {hasBonus && (
             <div className="mt-4 space-y-4 pl-4 border-l-2 border-teal-200">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">賞与総支給額</label>
                   <div className="relative">
@@ -519,7 +519,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
                   <p className="mt-1 text-xs text-gray-400">賞与の所得税率の基準。前月の給与がない場合は 0 を入力（特例・月額表で計算）</p>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">当年度の既払標準賞与額 累計</label>
                   <div className="relative">

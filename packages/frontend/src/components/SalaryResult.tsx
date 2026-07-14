@@ -18,7 +18,7 @@ export default function SalaryResult({ result, input, bonusResult, bonusInput }:
     <div className="bg-white rounded-lg shadow-sm overflow-hidden">
       {/* 手取額 */}
       <div className="bg-gradient-to-r from-teal-400 to-teal-500 p-8 text-white">
-        <div className="flex justify-between items-start">
+        <div className="flex flex-wrap justify-between items-start gap-2">
           <h2 className="text-lg font-medium mb-2">手取り額</h2>
           {input && (
             <button
@@ -29,7 +29,7 @@ export default function SalaryResult({ result, input, bonusResult, bonusInput }:
             </button>
           )}
         </div>
-        <p className="text-5xl font-bold">
+        <p className="text-4xl sm:text-5xl font-bold">
           ¥{result.netSalary.toLocaleString()}
         </p>
       </div>

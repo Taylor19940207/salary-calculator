@@ -56,20 +56,20 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex justify-between items-center">
+        <div className="max-w-7xl mx-auto px-4 py-5 sm:py-6">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
                 日本給与手取り計算ツール
               </h1>
-              <p className="mt-2 text-sm text-gray-600">
+              <p className="mt-1 sm:mt-2 text-sm text-gray-600">
                 2026年最新法令対応 - 正確な保険料率で実領額を計算
               </p>
             </div>
-            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+            <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-full sm:w-auto">
               <button
                 onClick={() => setMode('single')}
-                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+                className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
                   mode === 'single'
                     ? 'bg-white text-teal-700 shadow-sm'
                     : 'text-gray-500 hover:text-gray-800'
@@ -79,7 +79,7 @@ function App() {
               </button>
               <button
                 onClick={() => setMode('batch')}
-                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+                className={`flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
                   mode === 'batch'
                     ? 'bg-white text-teal-700 shadow-sm'
                     : 'text-gray-500 hover:text-gray-800'
