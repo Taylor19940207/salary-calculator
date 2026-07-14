@@ -64,6 +64,25 @@ export function roundEmployeeBurden(amount: number): number {
   return amount - floor <= 0.5 ? floor : floor + 1;
 }
 
+// 被保険者負担分の保険料を正確な整数演算で計算する。
+// base × (rate/100) の浮動小数点演算は、ちょうど50銭の境界で
+// 40.5 が 40.500000000000001 になり誤って切上げされる（例: 5,000円×0.81% → 41円、正しくは40円）。
+// 料率(%)は最大3桁小数のため1000倍の整数（千分率）にし、剰余で50銭判定する。
+// rateThousandths を直接渡す版は健保＋介護の合算丸め（率の整数加算）に使う。
+export function employeePremiumByThousandths(
+  base: number,
+  rateThousandths: number
+): { raw: number; rounded: number } {
+  const prod = base * rateThousandths; // 整数（base≤573万・率≤約10% → 2^53内で安全）
+  const rem = prod % 100000;
+  const floor = (prod - rem) / 100000;
+  return { raw: prod / 100000, rounded: rem <= 50000 ? floor : floor + 1 };
+}
+
+export function employeePremium(base: number, employeePercent: number): { raw: number; rounded: number } {
+  return employeePremiumByThousandths(base, Math.round(employeePercent * 1000));
+}
+
 // 銭単位（小数点2桁）に丸める。丸め前の生値を明細に表示する際、
 // 浮動小数点演算の誤差（例: 15760.000000000002）が出ないようにするため
 export function round2(amount: number): number {
@@ -253,23 +272,41 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
   if (input.enrollInInsurance) {
     const manualNote = input.manualGrade ? '【手動指定】' : '';
     const healthGradeLabel = healthGrade !== null ? `${manualNote}健保等級 第${healthGrade}級・` : '';
-    // 健康保険
-    const healthInsuranceRaw = standardMonthlyRemuneration * (insuranceRates.healthInsurance.employee / 100);
-    deductions.healthInsurance = roundEmployeeBurden(healthInsuranceRaw);
-    deductionsRaw.healthInsurance = round2(healthInsuranceRaw);
+    const isNursing = input.age >= 40 && input.age <= 64;
+
+    // 健康保険・介護保険
+    // 介護該当者（40〜64歳）の法律上の「健康保険の保険料」は一般保険料＋介護保険料の合算額
+    // （健康保険法156条。協会けんぽ保険料額表の該当者欄も合算折半額）であり、
+    // 50銭の端数処理は合算額に対して1回だけ行う。
+    // 分項表示のため業界標準の減算法を使う: 介護＝単独で丸め、健保＝合算丸め−介護。
+    const healthP = employeePremium(standardMonthlyRemuneration, insuranceRates.healthInsurance.employee);
+    deductionsRaw.healthInsurance = round2(healthP.raw);
+    let combinedNote = '';
+    if (isNursing) {
+      const nursingP = employeePremium(standardMonthlyRemuneration, insuranceRates.nursingCare.employee);
+      const combinedThousandths =
+        Math.round(insuranceRates.healthInsurance.employee * 1000) +
+        Math.round(insuranceRates.nursingCare.employee * 1000);
+      const combinedP = employeePremiumByThousandths(standardMonthlyRemuneration, combinedThousandths);
+      deductions.nursingCare = nursingP.rounded;
+      deductionsRaw.nursingCare = round2(nursingP.raw);
+      deductions.healthInsurance = combinedP.rounded - nursingP.rounded;
+      if (deductions.healthInsurance !== healthP.rounded) {
+        combinedNote = `※介護該当のため健保・介護の合算額 ¥${combinedP.rounded.toLocaleString()} で端数処理（健康保険法156条）`;
+      }
+    } else {
+      deductions.healthInsurance = healthP.rounded;
+    }
     breakdown.deductions.push({
       label: '健康保険',
       amount: deductions.healthInsurance,
       rawAmount: deductionsRaw.healthInsurance,
-      calculation: `${healthGradeLabel}標準報酬月額 ¥${standardMonthlyRemuneration.toLocaleString()} × ${insuranceRates.healthInsurance.employee}%（総料率 ${insuranceRates.healthInsurance.total}% の労使折半）`,
+      calculation: `${healthGradeLabel}標準報酬月額 ¥${standardMonthlyRemuneration.toLocaleString()} × ${insuranceRates.healthInsurance.employee}%（総料率 ${insuranceRates.healthInsurance.total}% の労使折半）${combinedNote}`,
       sourceUrl: insuranceRates.sourceUrls.healthInsurance,
     });
 
     // 介護保険（第2号被保険者: 40〜64歳。65歳以降は年金からの特別徴収となり給与控除なし）
-    if (input.age >= 40 && input.age <= 64) {
-      const nursingCareRaw = standardMonthlyRemuneration * (insuranceRates.nursingCare.employee / 100);
-      deductions.nursingCare = roundEmployeeBurden(nursingCareRaw);
-      deductionsRaw.nursingCare = round2(nursingCareRaw);
+    if (isNursing) {
       breakdown.deductions.push({
         label: '介護保険',
         amount: deductions.nursingCare,
@@ -285,9 +322,9 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
       : pensionStandardRemuneration < standardMonthlyRemuneration
         ? `（上限 ¥${PENSION_STANDARD_MAX.toLocaleString()} 適用）`
         : '';
-    const employeePensionRaw = pensionStandardRemuneration * (insuranceRates.employeePension.employee / 100);
-    deductions.employeePension = roundEmployeeBurden(employeePensionRaw);
-    deductionsRaw.employeePension = round2(employeePensionRaw);
+    const pensionP = employeePremium(pensionStandardRemuneration, insuranceRates.employeePension.employee);
+    deductions.employeePension = pensionP.rounded;
+    deductionsRaw.employeePension = round2(pensionP.raw);
     breakdown.deductions.push({
       label: '厚生年金',
       amount: deductions.employeePension,
@@ -296,10 +333,10 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
       sourceUrl: insuranceRates.sourceUrls.pension,
     });
 
-    // 子ども・子育て支援金
-    const childSupportRaw = standardMonthlyRemuneration * (insuranceRates.childSupport.employee / 100);
-    deductions.childSupport = roundEmployeeBurden(childSupportRaw);
-    deductionsRaw.childSupport = round2(childSupportRaw);
+    // 子ども・子育て支援金（健保・介護との合算丸めに含めるかは公式表の該当者欄を確認するまで単独丸めを維持）
+    const childP = employeePremium(standardMonthlyRemuneration, insuranceRates.childSupport.employee);
+    deductions.childSupport = childP.rounded;
+    deductionsRaw.childSupport = round2(childP.raw);
     breakdown.deductions.push({
       label: '子ども・子育て支援金',
       amount: deductions.childSupport,
@@ -317,9 +354,9 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
     // 雇用保険（被保険者負担分も50銭以下切捨て・50銭超切上げ）
     // 出張旅費は実費弁償のため賃金に含めない
     const wageForUnemployment = grossSalary - businessTripAllowance;
-    const unemploymentRaw = wageForUnemployment * (insuranceRates.unemployment.employee / 100);
-    deductions.unemployment = roundEmployeeBurden(unemploymentRaw);
-    deductionsRaw.unemployment = round2(unemploymentRaw);
+    const unemploymentP = employeePremium(wageForUnemployment, insuranceRates.unemployment.employee);
+    deductions.unemployment = unemploymentP.rounded;
+    deductionsRaw.unemployment = round2(unemploymentP.raw);
     breakdown.deductions.push({
       label: '雇用保険',
       amount: deductions.unemployment,

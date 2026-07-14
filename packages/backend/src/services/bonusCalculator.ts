@@ -1,6 +1,11 @@
 import type { BonusInput, BonusCalculationResult, InsuranceRates } from '../types/index.js';
 import { getInsuranceRates } from '../db/queries.js';
-import { calculateIncomeTax, roundEmployeeBurden, round2 } from './salaryCalculator.js';
+import {
+  calculateIncomeTax,
+  round2,
+  employeePremium,
+  employeePremiumByThousandths,
+} from './salaryCalculator.js';
 import { bonusTaxRate } from './bonusTaxRateTable2026.js';
 
 // 標準賞与額の上限（令和8年度）
@@ -74,26 +79,39 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
     deductions: [],
   };
 
-  // 3. 社会保険料（本人負担・端数は50銭以下切捨て/50銭超切上げ）
+  // 3. 社会保険料（本人負担・端数は50銭以下切捨て/50銭超切上げ、整数演算で50銭境界の浮動小数点誤差を排除）
   if (input.enrollInInsurance) {
     const capNote =
       healthStandardBonus < standardBonusAmount ? `（年度累計573万上限適用後 ¥${healthStandardBonus.toLocaleString()}）` : '';
 
-    const healthInsuranceRaw = healthStandardBonus * (ratesUsed.healthInsurance.employee / 100);
-    deductions.healthInsurance = roundEmployeeBurden(healthInsuranceRaw);
-    deductionsRaw.healthInsurance = round2(healthInsuranceRaw);
+    // 介護該当者は健保＋介護の合算額で1回だけ端数処理（健康保険法156条）→ 減算法で分項表示
+    const healthP = employeePremium(healthStandardBonus, ratesUsed.healthInsurance.employee);
+    deductionsRaw.healthInsurance = round2(healthP.raw);
+    let combinedNote = '';
+    if (isNursing) {
+      const nursingP = employeePremium(healthStandardBonus, ratesUsed.nursingCare.employee);
+      const combinedThousandths =
+        Math.round(ratesUsed.healthInsurance.employee * 1000) +
+        Math.round(ratesUsed.nursingCare.employee * 1000);
+      const combinedP = employeePremiumByThousandths(healthStandardBonus, combinedThousandths);
+      deductions.nursingCare = nursingP.rounded;
+      deductionsRaw.nursingCare = round2(nursingP.raw);
+      deductions.healthInsurance = combinedP.rounded - nursingP.rounded;
+      if (deductions.healthInsurance !== healthP.rounded) {
+        combinedNote = `※介護該当のため健保・介護の合算額 ¥${combinedP.rounded.toLocaleString()} で端数処理（健康保険法156条）`;
+      }
+    } else {
+      deductions.healthInsurance = healthP.rounded;
+    }
     breakdown.deductions.push({
       label: '健康保険',
       amount: deductions.healthInsurance,
       rawAmount: deductionsRaw.healthInsurance,
-      calculation: `標準賞与額 ¥${standardBonusAmount.toLocaleString()}${capNote} × ${ratesUsed.healthInsurance.employee}%（総料率 ${ratesUsed.healthInsurance.total}% の労使折半）`,
+      calculation: `標準賞与額 ¥${standardBonusAmount.toLocaleString()}${capNote} × ${ratesUsed.healthInsurance.employee}%（総料率 ${ratesUsed.healthInsurance.total}% の労使折半）${combinedNote}`,
       sourceUrl: ratesUsed.sourceUrls.healthInsurance,
     });
 
     if (isNursing) {
-      const nursingCareRaw = healthStandardBonus * (ratesUsed.nursingCare.employee / 100);
-      deductions.nursingCare = roundEmployeeBurden(nursingCareRaw);
-      deductionsRaw.nursingCare = round2(nursingCareRaw);
       breakdown.deductions.push({
         label: '介護保険',
         amount: deductions.nursingCare,
@@ -104,9 +122,9 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
 
     const pensionCapNote =
       pensionStandardBonus < standardBonusAmount ? `（1回150万上限適用後 ¥${pensionStandardBonus.toLocaleString()}）` : '';
-    const employeePensionRaw = pensionStandardBonus * (ratesUsed.employeePension.employee / 100);
-    deductions.employeePension = roundEmployeeBurden(employeePensionRaw);
-    deductionsRaw.employeePension = round2(employeePensionRaw);
+    const pensionP = employeePremium(pensionStandardBonus, ratesUsed.employeePension.employee);
+    deductions.employeePension = pensionP.rounded;
+    deductionsRaw.employeePension = round2(pensionP.raw);
     breakdown.deductions.push({
       label: '厚生年金',
       amount: deductions.employeePension,
@@ -115,9 +133,9 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
       sourceUrl: ratesUsed.sourceUrls.pension,
     });
 
-    const childSupportRaw = healthStandardBonus * (ratesUsed.childSupport.employee / 100);
-    deductions.childSupport = roundEmployeeBurden(childSupportRaw);
-    deductionsRaw.childSupport = round2(childSupportRaw);
+    const childP = employeePremium(healthStandardBonus, ratesUsed.childSupport.employee);
+    deductions.childSupport = childP.rounded;
+    deductionsRaw.childSupport = round2(childP.raw);
     breakdown.deductions.push({
       label: '子ども・子育て支援金',
       amount: deductions.childSupport,
@@ -132,9 +150,9 @@ export async function calculateBonus(input: BonusInput): Promise<BonusCalculatio
   const enrollInUnemploymentInsurance = input.enrollInUnemploymentInsurance !== false;
   if (enrollInUnemploymentInsurance) {
     // 雇用保険は標準賞与額ではなく賞与の実支給額に料率を掛ける
-    const unemploymentRaw = bonus * (ratesUsed.unemployment.employee / 100);
-    deductions.unemployment = roundEmployeeBurden(unemploymentRaw);
-    deductionsRaw.unemployment = round2(unemploymentRaw);
+    const unemploymentP = employeePremium(bonus, ratesUsed.unemployment.employee);
+    deductions.unemployment = unemploymentP.rounded;
+    deductionsRaw.unemployment = round2(unemploymentP.raw);
     breakdown.deductions.push({
       label: '雇用保険',
       amount: deductions.unemployment,
