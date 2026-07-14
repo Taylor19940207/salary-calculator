@@ -363,7 +363,7 @@ export default function BatchCalculator({ prefectures }: Props) {
                     e.stopPropagation();
                     removeEmployee(i);
                   }}
-                  className="text-gray-400 hover:text-red-600 cursor-pointer"
+                  className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer"
                   aria-label="削除"
                 >
                   ✕
@@ -374,15 +374,15 @@ export default function BatchCalculator({ prefectures }: Props) {
         </div>
         <button
           onClick={addEmployee}
-          className="shrink-0 px-3 py-2 text-sm bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+          className="shrink-0 px-4 py-2 text-sm font-semibold bg-teal-600 text-white rounded-lg shadow-sm hover:bg-teal-700 active:bg-teal-800 transition-colors"
         >
           ＋ 従業員を追加
         </button>
         <button
           onClick={duplicateEmployee}
-          className="shrink-0 px-3 py-2 text-sm bg-white border border-teal-600 text-teal-700 rounded-lg hover:bg-teal-50"
+          className="shrink-0 px-4 py-2 text-sm font-semibold bg-white border border-gray-300 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 active:bg-gray-100 transition-colors"
         >
-          ⧉ この従業員を複製
+          この従業員を複製
         </button>
       </div>
 
@@ -402,7 +402,7 @@ export default function BatchCalculator({ prefectures }: Props) {
       <button
         onClick={handleBatchCalculate}
         disabled={loading || employees.length === 0}
-        className="w-full py-3 bg-teal-600 text-white rounded-lg font-medium hover:bg-teal-700 disabled:bg-gray-400"
+        className="w-full py-3 bg-teal-600 text-white rounded-xl font-semibold shadow-sm hover:bg-teal-700 hover:shadow active:bg-teal-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none disabled:cursor-not-allowed transition-all"
       >
         {loading ? '計算中...' : `全員を計算（${employees.length} 名）`}
       </button>
@@ -427,7 +427,7 @@ export default function BatchCalculator({ prefectures }: Props) {
             <button
               onClick={handleCSVImport}
               disabled={loading}
-              className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+              className="mt-2 px-4 py-2 text-sm font-semibold bg-teal-600 text-white rounded-lg shadow-sm hover:bg-teal-700 active:bg-teal-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none disabled:cursor-not-allowed transition-colors"
             >
               CSV を取り込んで計算
             </button>
@@ -495,16 +495,16 @@ export default function BatchCalculator({ prefectures }: Props) {
             )}
             {bonusFailedCount > 0 && (
               <p className="mt-3 text-sm bg-red-600/80 rounded px-3 py-1.5">
-                ⚠️ {bonusFailedCount} 名の賞与計算に失敗しました（集計に含まれていません）
+                ※ {bonusFailedCount} 名の賞与計算に失敗しました（集計に含まれていません）
               </p>
             )}
           </div>
 
           <button
             onClick={handleCSVExport}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 text-sm font-semibold bg-white border border-gray-300 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 active:bg-gray-100 transition-colors"
           >
-            📥 CSV 出力
+            CSV 出力
           </button>
 
           <div className="bg-white rounded-lg shadow-sm overflow-hidden">
@@ -547,7 +547,7 @@ export default function BatchCalculator({ prefectures }: Props) {
                                     bonus: bonus?.result ? { result: bonus.result, input: bonus.input } : null,
                                   });
                                 }}
-                                className="px-2.5 py-1 bg-teal-600 text-white rounded text-xs font-medium hover:bg-teal-700 whitespace-nowrap"
+                                className="px-2.5 py-1.5 bg-teal-600 text-white rounded-md text-xs font-semibold shadow-sm hover:bg-teal-700 active:bg-teal-800 transition-colors whitespace-nowrap"
                               >
                                 {bonus?.result ? '出力(給与+賞与)' : '出力'}
                               </button>

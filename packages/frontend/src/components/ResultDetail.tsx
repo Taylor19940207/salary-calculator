@@ -48,7 +48,7 @@ export default function ResultDetail({ result }: Props) {
           {/* メタ情報（等級・料率）— 左カラム下部の余白に配置 */}
           <div className="bg-blue-50 rounded-lg p-4 space-y-2 text-xs">
             <p className="font-medium text-blue-900">
-              ⚠️ 本計算は {result.ratesUsed.effectiveDate} 版費率を使用
+              ※ 本計算は {result.ratesUsed.effectiveDate} 版費率を使用
             </p>
             <div className="text-blue-700 space-y-0.5">
               <p>
@@ -133,7 +133,7 @@ export default function ResultDetail({ result }: Props) {
                     rel="noopener noreferrer"
                     className="text-xs text-blue-600 hover:text-blue-800 inline-flex items-center"
                   >
-                    📊 保険料率表 →
+                    保険料率表 →
                   </a>
                 )}
               </div>

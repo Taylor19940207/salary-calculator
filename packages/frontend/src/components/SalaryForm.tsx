@@ -106,10 +106,10 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
             <button
               type="button"
               onClick={() => setSalaryType('monthly')}
-              className={`flex-1 py-2 px-4 rounded-lg border ${
+              className={`flex-1 py-2 px-4 rounded-lg border font-medium transition-colors ${
                 salaryType === 'monthly'
                   ? 'bg-teal-50 border-teal-500 text-teal-700'
-                  : 'bg-white border-gray-300 text-gray-700'
+                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
               }`}
             >
               月給
@@ -117,10 +117,10 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
             <button
               type="button"
               onClick={() => setSalaryType('hourly')}
-              className={`flex-1 py-2 px-4 rounded-lg border ${
+              className={`flex-1 py-2 px-4 rounded-lg border font-medium transition-colors ${
                 salaryType === 'hourly'
                   ? 'bg-teal-50 border-teal-500 text-teal-700'
-                  : 'bg-white border-gray-300 text-gray-700'
+                  : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
               }`}
             >
               時給
@@ -554,7 +554,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-teal-600 text-white py-3 px-6 rounded-lg font-medium hover:bg-teal-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          className="w-full bg-teal-600 text-white py-3 px-6 rounded-xl font-semibold shadow-sm hover:bg-teal-700 hover:shadow active:bg-teal-800 disabled:bg-gray-300 disabled:text-gray-500 disabled:shadow-none disabled:cursor-not-allowed transition-all"
         >
           {loading ? '計算中...' : hasBonus ? '給与＋賞与を計算する' : '計算する'}
         </button>

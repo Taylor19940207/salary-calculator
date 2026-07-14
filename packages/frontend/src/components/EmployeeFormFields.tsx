@@ -154,10 +154,10 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
           <button
             type="button"
             onClick={() => onChange({ salaryType: 'monthly' })}
-            className={`flex-1 py-2 px-4 rounded-lg border ${
+            className={`flex-1 py-2 px-4 rounded-lg border font-medium transition-colors ${
               d.salaryType === 'monthly'
                 ? 'bg-teal-50 border-teal-500 text-teal-700'
-                : 'bg-white border-gray-300 text-gray-700'
+                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
             }`}
           >
             月給
@@ -165,10 +165,10 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
           <button
             type="button"
             onClick={() => onChange({ salaryType: 'hourly' })}
-            className={`flex-1 py-2 px-4 rounded-lg border ${
+            className={`flex-1 py-2 px-4 rounded-lg border font-medium transition-colors ${
               d.salaryType === 'hourly'
                 ? 'bg-teal-50 border-teal-500 text-teal-700'
-                : 'bg-white border-gray-300 text-gray-700'
+                : 'bg-white border-gray-300 text-gray-600 hover:bg-gray-50'
             }`}
           >
             時給

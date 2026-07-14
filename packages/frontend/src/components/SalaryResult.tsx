@@ -23,9 +23,9 @@ export default function SalaryResult({ result, input, bonusResult, bonusInput }:
           {input && (
             <button
               onClick={() => setShowPayslip(true)}
-              className="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium backdrop-blur transition-colors"
+              className="px-3.5 py-2 bg-white/15 hover:bg-white/25 border border-white/40 rounded-lg text-sm font-semibold backdrop-blur transition-colors"
             >
-              📄 {hasBonus ? '給与・賞与明細を出力' : '給与明細を出力'}
+              {hasBonus ? '給与・賞与明細を出力' : '給与明細を出力'}
             </button>
           )}
         </div>
@@ -111,7 +111,7 @@ export default function SalaryResult({ result, input, bonusResult, bonusInput }:
                     rel="noopener noreferrer"
                     className="text-xs text-blue-600 hover:text-blue-800 inline-flex items-center"
                   >
-                    📊 保険料率表 →
+                    保険料率表 →
                   </a>
                 )}
               </div>
@@ -124,7 +124,7 @@ export default function SalaryResult({ result, input, bonusResult, bonusInput }:
         {/* メタ情報 */}
         <div className="bg-blue-50 rounded-lg p-4 space-y-2 text-xs">
           <p className="font-medium text-blue-900">
-            ⚠️ 本次計算使用 {result.ratesUsed.effectiveDate} 版費率
+            ※ 本次計算使用 {result.ratesUsed.effectiveDate} 版費率
           </p>
           <div className="text-blue-700 space-y-0.5">
             <p>
@@ -192,7 +192,7 @@ export default function SalaryResult({ result, input, bonusResult, bonusInput }:
             </table>
           </div>
           <p className="text-blue-600 text-xs">
-            📄 データ来源: 協会けんぽ、厚生労働省、日本年金機構
+            データ来源: 協会けんぽ、厚生労働省、日本年金機構
           </p>
         </div>
       </div>

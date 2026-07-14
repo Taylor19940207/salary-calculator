@@ -18,7 +18,7 @@ export default function BonusResult({ result }: Props) {
       <BonusResultDetail result={result} />
 
       <p className="px-5 py-3 border-t border-teal-100 text-xs text-gray-500">
-        📄 賞与明細の出力は上の「給与・賞与明細を出力」から（給与＋賞与を1ファイル2ページで印刷）
+        ※ 賞与明細の出力は上の「給与・賞与明細を出力」から（給与＋賞与を1ファイル2ページで印刷）
       </p>
     </div>
   );
