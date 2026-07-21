@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getGrades } from '../api';
+import { defaultSalaryMonth } from '../format';
 import type { SalaryInput, BonusInput, Prefecture, GradeInfo } from '../types';
 
 interface Props {
@@ -26,7 +27,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
   const [businessTripAllowance, setBusinessTripAllowance] = useState('0');
   const [otherAllowances, setOtherAllowances] = useState('0');
   const [prefecture, setPrefecture] = useState('13'); // 東京都
-  const [salaryMonth, setSalaryMonth] = useState('2026-05');
+  const [salaryMonth, setSalaryMonth] = useState(defaultSalaryMonth());
   const [age, setAge] = useState('35');
   const [dependents, setDependents] = useState('0');
   const [enrollInInsurance, setEnrollInInsurance] = useState(true);
@@ -36,11 +37,15 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
   const [overtimeHoliday, setOvertimeHoliday] = useState('0');
   const [overtimeNight, setOvertimeNight] = useState('0');
   const [absenceDays, setAbsenceDays] = useState('0');
-  const [scheduledMonthlyHours, setScheduledMonthlyHours] = useState('160');
+  // 月所定労働時間は「所定日数×1日の所定労働時間」で入力する（送信時に掛け算してscheduledMonthlyHoursにする）
+  const [scheduledDays, setScheduledDays] = useState('20');
+  const [scheduledHoursPerDay, setScheduledHoursPerDay] = useState('8');
   const [manualGrade, setManualGrade] = useState(''); // '' = 自動判定
   const [grades, setGrades] = useState<GradeInfo[]>([]);
   // 住民税（特別徴収・月額）: 決定通知書の月割額を転記する。空欄=控除なし
   const [residentTax, setResidentTax] = useState('');
+  // 前月調整訂正分: 前期給与計算の誤りを当月で調整する手動入力額。正=追加控除、負=追加支給。空欄=調整なし
+  const [priorMonthAdjustment, setPriorMonthAdjustment] = useState('');
   // 賞与（今月支給があれば ON。給与とは別計算だが基本情報は共通で使う）
   const [hasBonus, setHasBonus] = useState(false);
   // 賞与額・前月給与はダミー既定値を置かない（消し忘れ＝税率誤りに直結するため、意識的に入力させる）
@@ -72,6 +77,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
       enrollInUnemploymentInsurance,
       manualGrade: manualGrade ? Number(manualGrade) : undefined,
       residentTax: Number(residentTax) > 0 ? Number(residentTax) : undefined,
+      priorMonthAdjustment: Number(priorMonthAdjustment) !== 0 ? Number(priorMonthAdjustment) : undefined,
     };
 
     if (showOvertime) {
@@ -81,7 +87,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
         night: Number(overtimeNight),
       };
       input.absenceDays = Number(absenceDays);
-      input.scheduledMonthlyHours = Number(scheduledMonthlyHours) || 160;
+      input.scheduledMonthlyHours = (Number(scheduledDays) || 20) * (Number(scheduledHoursPerDay) || 8) || 160;
     }
 
     // 賞与ありなら、給与と共通の基本情報を引き継いだ賞与入力も作る（計算は別経路）
@@ -401,6 +407,24 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
               市区町村の特別徴収税額決定通知書の月割額を入力（6月分は端数調整で他月と異なる場合あり）。入社1年目など前年所得なしは空欄
             </p>
           </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              前月調整訂正分
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                value={priorMonthAdjustment}
+                onChange={(e) => setPriorMonthAdjustment(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                placeholder="0"
+              />
+              <span className="absolute right-4 top-2.5 text-gray-500">円</span>
+            </div>
+            <p className="mt-1 text-xs text-gray-600">
+              前期の給与計算誤りを当月で調整する場合に入力。正の値＝追加控除（回収）、負の値＝追加支給（還元）。所得税・社会保険料の計算には影響しません。空欄=調整なし
+            </p>
+          </div>
         </div>
 
         <SectionHeader
@@ -423,24 +447,43 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
           {showOvertime && (
             <div className="mt-4 space-y-4 pl-4 border-l-2 border-gray-200">
               {salaryType === 'monthly' && (
-                <div className="w-full sm:w-1/2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    月所定労働時間
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      value={scheduledMonthlyHours}
-                      onChange={(e) => setScheduledMonthlyHours(e.target.value)}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                      min="1"
-                      max="250"
-                      step="1"
-                    />
-                    <span className="absolute right-3 top-2 text-xs text-gray-500">h</span>
+                <div className="grid grid-cols-2 gap-4 w-full sm:w-1/2">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      所定日数
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={scheduledDays}
+                        onChange={(e) => setScheduledDays(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                        min="1"
+                        max="31"
+                        step="1"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-gray-500">日</span>
+                    </div>
                   </div>
-                  <p className="mt-1 text-xs text-gray-600">
-                    基準時給・欠勤日割の分母。祝日の多い月は少なめ（例: 5月 152h）
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      1日の所定労働時間
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={scheduledHoursPerDay}
+                        onChange={(e) => setScheduledHoursPerDay(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                        min="0.5"
+                        max="24"
+                        step="0.5"
+                      />
+                      <span className="absolute right-3 top-2 text-xs text-gray-500">h</span>
+                    </div>
+                  </div>
+                  <p className="col-span-2 mt-1 text-xs text-gray-600">
+                    ＝月所定労働時間 {(Number(scheduledDays) || 0) * (Number(scheduledHoursPerDay) || 0)}h（基準時給・欠勤日割の分母。祝日の多い月は日数少なめ）
                   </p>
                 </div>
               )}
@@ -511,7 +554,7 @@ export default function SalaryForm({ onCalculate, loading, prefectures }: Props)
                     <span className="absolute right-3 top-2 text-xs text-gray-500">日</span>
                   </div>
                   <p className="mt-1 text-xs text-gray-600">
-                    日割額 = 月給 ÷ 所定{Math.round((Number(scheduledMonthlyHours) || 160) / 8)}日（所定時間 ÷ 8h）
+                    日割額 = 月給 ÷ 所定{Math.round(((Number(scheduledDays) || 20) * (Number(scheduledHoursPerDay) || 8)) / 8)}日（所定時間 ÷ 8h）
                   </p>
                 </div>
               )}

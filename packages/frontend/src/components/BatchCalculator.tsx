@@ -207,9 +207,9 @@ export default function BatchCalculator({ prefectures }: Props) {
         return { index: i, reason: `${who}：時給を入力してください` };
       }
       if (d.showOvertime && d.salaryType === 'monthly') {
-        const h = Number(d.scheduledMonthlyHours);
+        const h = Number(d.scheduledDays) * Number(d.scheduledHoursPerDay);
         if (h && (h < 1 || h > 250)) {
-          return { index: i, reason: `${who}：月所定労働時間は 1〜250 の範囲で入力してください` };
+          return { index: i, reason: `${who}：月所定労働時間（所定日数×1日の所定労働時間）は 1〜250 の範囲で入力してください` };
         }
       }
       // 賞与あり: ダミー既定値を廃止したため、未入力のまま計算に進ませない

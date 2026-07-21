@@ -181,7 +181,9 @@ export default function Payslip({
     ],
     [
       ['住民税', (d.residentTax || 0) > 0 ? fmt(d.residentTax) : '—'],
-      null,
+      d.priorMonthAdjustment
+        ? ['前月調整訂正分', d.priorMonthAdjustment > 0 ? fmt(d.priorMonthAdjustment) : `-${fmt(-d.priorMonthAdjustment)}`]
+        : null,
       null,
       null,
       null,
@@ -232,7 +234,7 @@ export default function Payslip({
         ],
         [
           { label: '住民税', value: d.residentTax || 0, includeInTotal: true },
-          null,
+          { label: '前月調整訂正分', value: d.priorMonthAdjustment || 0, includeInTotal: true },
           null,
           null,
           null,

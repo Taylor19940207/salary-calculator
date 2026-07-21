@@ -1,3 +1,4 @@
+import { defaultSalaryMonth } from '../format';
 import type { Prefecture, GradeInfo, SalaryInput, BonusInput } from '../types';
 
 // 複数人版で 1 名分の入力を保持するドラフト。数値は文字列で保持し、
@@ -20,12 +21,15 @@ export interface EmployeeDraft {
   enrollInUnemploymentInsurance: boolean; // 雇用保険加入。false=未加入（法人代表・役員等）
   manualGrade: string; // '' = 自動判定
   residentTax: string; // 住民税（特別徴収・月額）。'' = 控除なし
+  priorMonthAdjustment: string; // 前月調整訂正分。正=追加控除、負=追加支給。'' = 調整なし
   showOvertime: boolean;
   overtimeRegular: string;
   overtimeHoliday: string;
   overtimeNight: string;
   absenceDays: string;
-  scheduledMonthlyHours: string;
+  // 月所定労働時間は「所定日数×1日の所定労働時間」で入力する（draftToInputで掛け算）
+  scheduledDays: string;
+  scheduledHoursPerDay: string;
   // 賞与（今月支給があれば ON。給与とは別計算だが基本情報は共通）
   hasBonus: boolean;
   bonusAmount: string;
@@ -46,19 +50,21 @@ export function createEmptyDraft(index: number): EmployeeDraft {
     businessTripAllowance: '0',
     otherAllowances: '0',
     prefecture: '13',
-    salaryMonth: '2026-05',
+    salaryMonth: defaultSalaryMonth(),
     age: '35',
     dependents: '0',
     enrollInInsurance: true,
     enrollInUnemploymentInsurance: true,
     manualGrade: '',
     residentTax: '',
+    priorMonthAdjustment: '',
     showOvertime: false,
     overtimeRegular: '0',
     overtimeHoliday: '0',
     overtimeNight: '0',
     absenceDays: '0',
-    scheduledMonthlyHours: '160',
+    scheduledDays: '20',
+    scheduledHoursPerDay: '8',
     // 賞与額・前月給与はダミー既定値を置かない（消し忘れ＝税率誤りに直結）
     hasBonus: false,
     bonusAmount: '',
@@ -104,6 +110,7 @@ export function draftToInput(d: EmployeeDraft): SalaryInput & { id: string; name
     enrollInUnemploymentInsurance: d.enrollInUnemploymentInsurance,
     manualGrade: d.manualGrade ? Number(d.manualGrade) : undefined,
     residentTax: Number(d.residentTax) > 0 ? Number(d.residentTax) : undefined,
+    priorMonthAdjustment: Number(d.priorMonthAdjustment) !== 0 ? Number(d.priorMonthAdjustment) : undefined,
   };
 
   if (d.showOvertime) {
@@ -113,7 +120,7 @@ export function draftToInput(d: EmployeeDraft): SalaryInput & { id: string; name
       night: Number(d.overtimeNight),
     };
     input.absenceDays = Number(d.absenceDays);
-    input.scheduledMonthlyHours = Number(d.scheduledMonthlyHours) || 160;
+    input.scheduledMonthlyHours = (Number(d.scheduledDays) || 20) * (Number(d.scheduledHoursPerDay) || 8) || 160;
   }
 
   return input;
@@ -417,6 +424,22 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
             決定通知書の月割額を入力（6月分は端数調整あり）。前年所得なしは空欄
           </p>
         </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">前月調整訂正分</label>
+          <div className="relative">
+            <input
+              type="number"
+              value={d.priorMonthAdjustment}
+              onChange={(e) => onChange({ priorMonthAdjustment: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+              placeholder="0"
+            />
+            <span className="absolute right-4 top-2.5 text-gray-500">円</span>
+          </div>
+          <p className="mt-1 text-xs text-gray-600">
+            前期の給与計算誤りを当月で調整する場合に入力。正＝追加控除、負＝追加支給。税・社保計算には影響しません
+          </p>
+        </div>
       </div>
 
       <SectionHeader
@@ -439,22 +462,39 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
         {d.showOvertime && (
           <div className="mt-4 space-y-4 pl-4 border-l-2 border-gray-200">
             {d.salaryType === 'monthly' && (
-              <div className="w-full sm:w-1/2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">月所定労働時間</label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    value={d.scheduledMonthlyHours}
-                    onChange={(e) => onChange({ scheduledMonthlyHours: e.target.value })}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
-                    min="1"
-                    max="250"
-                    step="1"
-                  />
-                  <span className="absolute right-3 top-2 text-xs text-gray-500">h</span>
+              <div className="grid grid-cols-2 gap-4 w-full sm:w-1/2">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">所定日数</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={d.scheduledDays}
+                      onChange={(e) => onChange({ scheduledDays: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                      min="1"
+                      max="31"
+                      step="1"
+                    />
+                    <span className="absolute right-3 top-2 text-xs text-gray-500">日</span>
+                  </div>
                 </div>
-                <p className="mt-1 text-xs text-gray-600">
-                  基準時給・欠勤日割の分母。祝日の多い月は少なめ（例: 5月 152h）
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">1日の所定労働時間</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={d.scheduledHoursPerDay}
+                      onChange={(e) => onChange({ scheduledHoursPerDay: e.target.value })}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+                      min="0.5"
+                      max="24"
+                      step="0.5"
+                    />
+                    <span className="absolute right-3 top-2 text-xs text-gray-500">h</span>
+                  </div>
+                </div>
+                <p className="col-span-2 mt-1 text-xs text-gray-600">
+                  ＝月所定労働時間 {(Number(d.scheduledDays) || 0) * (Number(d.scheduledHoursPerDay) || 0)}h（基準時給・欠勤日割の分母。祝日の多い月は日数少なめ）
                 </p>
               </div>
             )}
@@ -517,7 +557,7 @@ export default function EmployeeFormFields({ value: d, onChange, prefectures, gr
                   <span className="absolute right-3 top-2 text-xs text-gray-500">日</span>
                 </div>
                 <p className="mt-1 text-xs text-gray-600">
-                  日割額 = 月給 ÷ 所定{Math.round((Number(d.scheduledMonthlyHours) || 160) / 8)}日（所定時間 ÷ 8h）
+                  日割額 = 月給 ÷ 所定{Math.round(((Number(d.scheduledDays) || 20) * (Number(d.scheduledHoursPerDay) || 8)) / 8)}日（所定時間 ÷ 8h）
                 </p>
               </div>
             )}

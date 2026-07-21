@@ -33,6 +33,7 @@ const BatchCalculateSchema = z.object({
     scheduledMonthlyHours: z.number().min(1).max(250).optional(),
     manualGrade: z.number().int().min(1).max(50).optional(),
     residentTax: z.number().min(0).optional(), // 住民税（特別徴収・月額）
+    priorMonthAdjustment: z.number().optional(), // 前月調整訂正分（正負可）
   })).min(1).max(100) // 最多一次處理 100 人
 });
 
@@ -77,6 +78,7 @@ router.post('/calculate/batch', async (req, res) => {
           scheduledMonthlyHours: employee.scheduledMonthlyHours,
           manualGrade: employee.manualGrade,
           residentTax: employee.residentTax,
+          priorMonthAdjustment: employee.priorMonthAdjustment,
         };
 
         const result = await calculateSalary(input);
@@ -192,6 +194,10 @@ router.post('/calculate/import-csv', async (req, res) => {
           case '住民税':
             employee.residentTax = parseFloat(value) || undefined;
             break;
+          case 'priormonthadjustment':
+          case '前月調整訂正分':
+            employee.priorMonthAdjustment = parseFloat(value) || undefined;
+            break;
           case 'otherallowances':
           case 'その他手当':
             employee.otherAllowances = parseFloat(value) || 0;
@@ -292,6 +298,7 @@ router.post('/calculate/export-csv', async (req, res) => {
       '子育支援金',
       '所得税',
       '住民税',
+      '前月調整訂正分',
       '控除合計',
       '手取額',
     ].join(',');
@@ -316,6 +323,7 @@ router.post('/calculate/export-csv', async (req, res) => {
         fmtNum(d.childSupport),
         fmtNum(d.incomeTax),
         fmtNum(d.residentTax ?? 0),
+        fmtNum(d.priorMonthAdjustment ?? 0),
         fmtNum(d.total),
         fmtNum(netSalary),
       ].join(',');

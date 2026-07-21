@@ -11,6 +11,13 @@ export function formatYen(amount: number): string {
   return round2(amount).toLocaleString('ja-JP', { maximumFractionDigits: 2 });
 }
 
+// 給与年月の初期値＝今月（YYYY-MM）。日付を毎回遠くまで戻す手間を無くすため、
+// 開いた時点の月を既定にする（過去の給与を計算するときだけ手で戻せばよい）
+export function defaultSalaryMonth(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
 // 明細上で金額を手動調整できる控除項目。
 // 健保・介護・子育て支援金は協会けんぽ料額表（または同構造の料率計算）で丸め前の小数が出るため、
 // 表の値をそのまま表示し、各社の労使特約（切捨て・四捨五入等）に合わせて利用会社が手で調整する。
@@ -68,7 +75,8 @@ export function mergedSalaryDeductions(result: SalaryCalculationResult, ov: Dedu
       d.employeePension +
       d.unemployment +
       d.incomeTax +
-      d.residentTax
+      d.residentTax +
+      d.priorMonthAdjustment
   );
   return {
     healthInsurance,
@@ -78,6 +86,7 @@ export function mergedSalaryDeductions(result: SalaryCalculationResult, ov: Dedu
     unemployment: d.unemployment,
     incomeTax: d.incomeTax,
     residentTax: d.residentTax,
+    priorMonthAdjustment: d.priorMonthAdjustment,
     total,
     netSalary: round2(result.grossSalary - total),
   };

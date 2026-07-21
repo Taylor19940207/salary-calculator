@@ -265,6 +265,7 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
     childSupport: 0,
     incomeTax: 0,
     residentTax: 0,
+    priorMonthAdjustment: 0,
     total: 0,
   };
   const deductionsRaw = { ...deductions };
@@ -402,6 +403,23 @@ export async function calculateSalary(input: SalaryInput): Promise<SalaryCalcula
       amount: deductions.residentTax,
       rawAmount: deductions.residentTax,
       calculation: '市区町村の特別徴収税額決定通知書による月割額（前年所得に基づく決定額の転記）',
+    });
+  }
+
+  // 5-3. 前月調整訂正分: 前期給与計算の誤りを当月で調整する手動入力額。
+  // 正=追加控除（前月に少なく控除した／多く支給した分をこの月で回収）、負=追加支給（前月に多く控除した分をこの月で還元）。
+  // 当月の所得税・社会保険料の計算には一切影響しない（税基準・社保基数はいずれも計算済みのため）。
+  deductions.priorMonthAdjustment = Math.round(input.priorMonthAdjustment || 0);
+  deductionsRaw.priorMonthAdjustment = deductions.priorMonthAdjustment;
+  if (deductions.priorMonthAdjustment !== 0) {
+    breakdown.deductions.push({
+      label: '前月調整訂正分',
+      amount: deductions.priorMonthAdjustment,
+      rawAmount: deductions.priorMonthAdjustment,
+      calculation:
+        deductions.priorMonthAdjustment > 0
+          ? '前期給与計算の誤りを当月で調整（追加控除）'
+          : '前期給与計算の誤りを当月で調整（追加支給）',
     });
   }
 

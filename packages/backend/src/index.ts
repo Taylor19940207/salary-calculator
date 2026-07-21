@@ -124,6 +124,7 @@ const SalaryInputSchema = z.object({
   scheduledMonthlyHours: z.number().min(1).max(250).optional(), // 月所定労働時間（省略時160h）
   manualGrade: z.number().int().min(1).max(50).optional(),      // 社保等級の手動指定
   residentTax: z.number().min(0).optional(),                    // 住民税（特別徴収・月額、決定通知書の転記）
+  priorMonthAdjustment: z.number().optional(),                  // 前月調整訂正分（正負可、前期給与計算の誤りを当月で調整）
 });
 
 app.post('/api/calculate', async (req, res) => {

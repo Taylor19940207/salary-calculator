@@ -36,6 +36,7 @@ export interface SalaryInput {
   scheduledMonthlyHours?: number; // 月所定労働時間（省略時160h）
   manualGrade?: number;           // 社保等級の手動指定（1〜50、省略時は自動判定）
   residentTax?: number;           // 住民税（特別徴収・月額）。決定通知書の月割額をそのまま控除
+  priorMonthAdjustment?: number;  // 前月調整訂正分。前期給与計算の誤りを当月で調整する手動入力額（正=追加控除、負=追加支給）
   enrollInUnemploymentInsurance?: boolean; // 雇用保険加入。false=未加入（法人代表・役員等）、省略時は加入扱い
 }
 
@@ -62,11 +63,12 @@ export interface SalaryCalculationResult {
     childSupport: number;
     incomeTax: number;
     residentTax: number; // 住民税（特別徴収・入力された月割額の転記）
+    priorMonthAdjustment: number; // 前月調整訂正分（手動入力額の転記。正負可）
     total: number;
   };
   // deductions と同じ形だが、健保・介護・厚年・子育て支援金・雇用保険の5項目は
   // 被保険者負担分の法定端数処理（50銭以下切捨て・50銭超切上げ）前の生値（銭単位）。
-  // 所得税・住民税は端数処理の対象外のため deductions と同じ値
+  // 所得税・住民税・前月調整訂正分は端数処理の対象外のため deductions と同じ値
   deductionsRaw: {
     healthInsurance: number;
     nursingCare: number;
@@ -75,6 +77,7 @@ export interface SalaryCalculationResult {
     childSupport: number;
     incomeTax: number;
     residentTax: number;
+    priorMonthAdjustment: number;
     total: number;
   };
   netSalary: number;
