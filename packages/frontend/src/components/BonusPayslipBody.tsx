@@ -121,20 +121,32 @@ export default function BonusPayslipBody({
         {y}年{m}月分　賞与支払明細書
       </h1>
 
-      <div className="flex justify-between items-start mb-1">
-        <p className="text-base font-bold">{companyName}</p>
-        {paymentDate && <p className="text-sm">賞与支給日: {fmtJpDate(paymentDate)}</p>}
-      </div>
-      <div className="flex justify-between items-end mb-4">
-        <p className="text-sm">
-          氏名: {employeeName}
-          {employeeNo && `（社員番号: ${employeeNo}）`}
-        </p>
-        <div className="text-right border-b-2 pb-1" style={{ borderColor: TEAL }}>
-          <span className="text-lg font-bold mr-8">差引支給額</span>
-          <span className="text-2xl font-bold">¥{fmt(netAmount)}</span>
-        </div>
-      </div>
+      {/* Microsoft Print to PDF（Windows）は flex justify-between の子要素を落とすことがあるため、
+          他の表と同じ table 罫線なしレイアウトで組む */}
+      <table className="w-full mb-1" style={{ borderCollapse: 'collapse' }}>
+        <tbody>
+          <tr>
+            <td className="text-base font-bold p-0 text-left align-top">{companyName}</td>
+            <td className="text-sm p-0 text-right align-top">{paymentDate && `賞与支給日: ${fmtJpDate(paymentDate)}`}</td>
+          </tr>
+        </tbody>
+      </table>
+      <table className="w-full mb-4" style={{ borderCollapse: 'collapse' }}>
+        <tbody>
+          <tr>
+            <td className="text-sm p-0 text-left align-bottom">
+              氏名: {employeeName}
+              {employeeNo && `（社員番号: ${employeeNo}）`}
+            </td>
+            <td className="p-0 text-right align-bottom">
+              <div className="inline-block text-right border-b-2 pb-1" style={{ borderColor: TEAL }}>
+                <span className="text-lg font-bold mr-8">差引支給額</span>
+                <span className="text-2xl font-bold">¥{fmt(netAmount)}</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       {renderSection('支給', shikyuRows, 4)}
       {renderSection('控除', kojoRows, 4)}
